@@ -24,7 +24,7 @@ edit_settings = UIAction(
 system_menu = UIMenu(
     name="System",
     items=[
-        UIMenuItem(name="Dashboard", path="/", item=None), # Special case
+        UIMenuItem(name="System Statistics", path="/system/statistics"),
         UIMenuItem(name="Settings", path="/system/settings", item=edit_settings),
     ]
 )

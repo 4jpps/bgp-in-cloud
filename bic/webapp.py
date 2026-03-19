@@ -3,13 +3,12 @@ from fastapi import FastAPI, Request, Depends, HTTPException
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse
-from starlette.middleware.base import BaseHTTPMiddleware
 from pathlib import Path
 
 from bic.core import BIC_DB
 from bic.ui import main_menu as menu_structure
 from bic.ui.schema import UIMenu, UIMenuItem, UIView, UIAction
-from bic.modules import system_management # Import the module
+from bic.modules import system_management
 
 # --- App and Template Setup ---
 app = FastAPI()
@@ -20,18 +19,17 @@ templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 # --- Database Dependency ---
 def get_db():
     db = BIC_DB(base_dir=str(BASE_DIR.parent))
-    yield db
+    try:
+        yield db
+    finally:
+        db.conn.close()
 
-# --- Global Context Middleware ---
-class GlobalContextMiddleware(BaseHTTPMiddleware):
-    async def dispatch(self, request: Request, call_next):
-        db = next(get_db()) # Get a DB instance for the middleware
-        settings = system_management.get_all_settings(db)
-        request.state.settings = settings # Inject settings into request state
-        response = await call_next(request)
-        return response
-
-app.add_middleware(GlobalContextMiddleware)
+# --- Global Template Context Processor ---
+@templates.context_processor
+def get_global_context(request: Request):
+    db = next(get_db())
+    settings = system_management.get_all_settings(db)
+    return {"settings": settings}
 
 # --- Helper function to find schema items ---
 def find_ui_item_by_path(path: str):
@@ -88,19 +86,13 @@ async def handle_form_post(request: Request, path: str, db: BIC_DB = Depends(get
     
     form_data = await request.form()
     form_dict = {k: v for k, v in form_data.items()}
-
-    # The handler function needs the db_core, so we add it.
-    handler_kwargs = {"db_core": db}
-    handler_kwargs.update(form_dict)
-
-    # Call the handler
+    handler_kwargs = {"db_core": db, **form_dict}
     ui_item.item.handler(**handler_kwargs)
     
-    # Redirect back to the originating list view or dashboard
     parent_path = "/" + "/".join(path.split("/")[:-1])
     return RedirectResponse(url=f"/page{parent_path}", status_code=303)
 
-# --- Special Case Route for Provisioning ---
+# --- Special Case Routes ---
 @app.get("/clients/provision/new", response_class=HTMLResponse)
 async def provision_client_form(request: Request, db: BIC_DB = Depends(get_db)):
     pools = db.find_all("ip_pools")
@@ -112,6 +104,12 @@ async def handle_provision_client(request: Request, db: BIC_DB = Depends(get_db)
     form_data = await request.form()
     client_management.provision_new_client(db_core=db, **form_data)
     return RedirectResponse(url="/page/clients/list", status_code=303)
+
+@app.get("/system/statistics", response_class=HTMLResponse)
+async def system_stats_page(request: Request, db: BIC_DB = Depends(get_db)):
+    from bic.modules import statistics_management
+    stats = statistics_management.gather_all_statistics(db)
+    return templates.TemplateResponse("system_statistics.html", {"request": request, "stats": stats, "menu": menu_structure, "current_path": "/system/statistics"})
 
 @app.on_event("startup")
 async def startup_event():

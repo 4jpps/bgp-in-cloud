@@ -3,33 +3,34 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ request.state.settings.branding_company_name | default('BIC IPAM') }}{% endblock %}</title>
+    <title>{% block title %}{{ settings.branding_company_name | default('BIC IPAM') }}{% endblock %}</title>
     <link href="{{ url_for('static', path='/style.css') }}" rel="stylesheet">
 </head>
-<body>
-    {% macro render_menu(menu_items) %}
-        {% for item in menu_items %}
-            {% if item.item.items %}
-                <div class="nav-dropdown">
-                    <button class="nav-button">{{ item.name }}</button>
-                    <div class="dropdown-content">
-                        {{ render_menu(item.item.items) }}
-                    </div>
-                </div>
-            {% else %}
-                 <a href="/page{{ item.path }}" class="nav-button-link">{{ item.name }}</a>
-            {% endif %}
-        {% endfor %}
-    {% endmacro %}
+<body class="bg-gray-100 text-gray-800">
 
     <nav class="navbar">
-        <a href="/" class="nav-brand">{{ request.state.settings.branding_company_name | default('BIC IPAM') }}</a>
+        <a href="/" class="nav-brand">{{ settings.branding_company_name | default('BIC IPAM') }}</a>
         <div class="nav-links">
+            {% macro render_menu(items, parent_path='') %}
+                {% for item in items %}
+                    <a href="{{ url_for('render_page', path=item.path.lstrip('/')) }}" 
+                       class="nav-link {% if request.url.path == item.path %}active{% endif %}">
+                        {{ item.name }}
+                    </a>
+                {% endfor %}
+            {% endmacro %}
             {{ render_menu(menu.items) }}
         </div>
     </nav>
-    <div class="container">
+
+    <main class="container mx-auto p-4">
         {% block content %}{% endblock %}
-    </div>
+    </main>
+
+    <footer class="footer">
+        Copyright &copy; {{ "now" | strftime("%Y") }} {{ settings.branding_company_name | default('Your Company') }}. 
+        Version: {{ version }}
+    </footer>
+
 </body>
 </html>

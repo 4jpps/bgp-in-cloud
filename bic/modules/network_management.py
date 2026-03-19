@@ -2,6 +2,25 @@ import ipaddress
 import subprocess
 from rich.console import Console
 from bic.core import BIC_DB
+
+def get_pool_usage(db_core: BIC_DB, pool_id: int):
+    """Calculates the usage percentage of a given IP pool."""
+    pool = db_core.find_one('ip_pools', {'id': pool_id})
+    if not pool:
+        return {"name": "Unknown", "usage": 0}
+
+    try:
+        network = ipaddress.ip_network(pool['cidr'])
+        total_ips = network.num_addresses
+        allocated_ips = db_core.conn.execute(
+            "SELECT COUNT(*) FROM ip_allocations WHERE pool_id = ?", (pool_id,)
+        ).fetchone()[0]
+        
+        usage = (allocated_ips / total_ips) * 100 if total_ips > 0 else 0
+        return {"name": pool['name'], "usage": usage}
+    except Exception as e:
+        print(f"Error calculating usage for pool {pool_id}: {e}")
+        return {"name": pool.get('name', 'Unknown'), "usage": 0}
 from bic.modules import client_management, wireguard_management
 
 console = Console()

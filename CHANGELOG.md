@@ -6,6 +6,14 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0557] - 2026-03-19
+
+### Changed
+- **Branding:** The application title is now correctly set to "BGP in the Cloud", and the version number is displayed in the footer.
+
+### Fixed
+- **Critical TUI Crash:** Corrected a recurring `AttributeError` by using the correct `find_one` database method.
+
 ## [2026.03.19.0550] - 2026-03-19
 
 ### Changed

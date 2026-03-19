@@ -22,7 +22,7 @@ All notable changes to this project will be documented in this file.
 - WebUI navigation for system statistics by linking directly to special route instead of generic page route.
 - TUI navigation by removing duplicate button press handler and fixing stats display updates.
 - Client provisioning redirect in generic page route to handle direct URL access.
-- Client provisioning form to display pool names only (without CIDR) and show appropriate subnet prefix options (/32, /29, /27 for IPv4 or /128, /64, /56 for IPv6) based on selected pool's IP family.
+- Client provisioning form to display pool descriptions and implement proper Single IP vs Subnet logic: Single IP automatically uses /32 (IPv4) or /128 (IPv6), Subnet shows /29, /27 (IPv4) or /64, /56 (IPv6) options.
 
 ### Fixed
 - TUI widget ID generation to use valid identifiers, preventing startup crashes.

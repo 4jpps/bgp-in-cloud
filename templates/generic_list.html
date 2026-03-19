@@ -25,7 +25,7 @@
                 {% if view.actions %}
                     <td>
                         {% for action_item in view.actions %}
-                            <a href="{{ url_for('render_page', path=action_item.path.lstrip('/')) }}?id={{ item.id }}" class="action-button">
+                            <a href="/page/{{ action_item.path.lstrip('/') }}?id={{ item.id }}" class="action-button">
                                 {{ action_item.name }}
                             </a>
                         {% endfor %}

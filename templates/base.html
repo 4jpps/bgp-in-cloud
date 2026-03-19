@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ settings(request).get('branding_company_name', 'BIC IPAM') }}{% endblock %}</title>
+    <title>{% block title %}{{ request.state.settings.branding_company_name | default('BIC IPAM') }}{% endblock %}</title>
     <link href="{{ url_for('static', path='/style.css') }}" rel="stylesheet">
 </head>
 <body>
@@ -23,7 +23,7 @@
     {% endmacro %}
 
     <nav class="navbar">
-        <a href="/" class="nav-brand">{{ settings(request).get('branding_company_name', 'BIC IPAM') }}</a>
+        <a href="/" class="nav-brand">{{ request.state.settings.branding_company_name | default('BIC IPAM') }}</a>
         <div class="nav-links">
             {{ render_menu(menu.items) }}
         </div>

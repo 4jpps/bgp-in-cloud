@@ -9,6 +9,7 @@ from pathlib import Path
 from bic.core import BIC_DB
 from bic.ui import main_menu as menu_structure
 from bic.ui.schema import UIMenu, UIMenuItem, UIView, UIAction
+from bic.modules import system_management # Import the module
 
 # --- App and Template Setup ---
 app = FastAPI()
@@ -24,6 +25,9 @@ def get_db():
 # --- Global Context Middleware ---
 class GlobalContextMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next):
+        db = next(get_db()) # Get a DB instance for the middleware
+        settings = system_management.get_all_settings(db)
+        request.state.settings = settings # Inject settings into request state
         response = await call_next(request)
         return response
 
@@ -93,7 +97,6 @@ async def handle_form_post(request: Request, path: str, db: BIC_DB = Depends(get
     ui_item.item.handler(**handler_kwargs)
     
     # Redirect back to the originating list view or dashboard
-    # This is a simplification; a more robust solution might store the return URL
     parent_path = "/" + "/".join(path.split("/")[:-1])
     return RedirectResponse(url=f"/page{parent_path}", status_code=303)
 

@@ -1,19 +1,19 @@
 from bic.core import BIC_DB
-from bic.modules import network_management
 
-def get_all_settings(db_core: BIC_DB) -> dict:
-    """Retrieves all settings from the database and returns them as a dictionary."""
-    settings_rows = db_core.find_all('settings')
-    return {row['key']: row['value'] for row in settings_rows}
+def get_all_settings(db_core: BIC_DB):
+    """Loads all settings from the database into a single dictionary."""
+    settings_list = db_core.find_all('settings')
+    return {setting['key']: setting['value'] for setting in settings_list}
 
 def save_all_settings(db_core: BIC_DB, **kwargs):
-    """Saves all settings from a form submission and triggers necessary updates."""
-    # The handler receives all form fields as kwargs
+    """Saves a dictionary of settings to the database."""
     for key, value in kwargs.items():
-        db_core.insert_or_replace('settings', {'key': key, 'value': value})
-    
-    # After saving, trigger updates for services that depend on these settings
-    network_management.update_bird_configs(db_core)
-    # In the future, we might also need to update WireGuard if the endpoint changes.
-    
-    return {"success": True, "message": "Settings updated and services reconfigured."}
+        # This assumes an "upsert" logic is desired. We try to update,
+        # and if it fails (because the key doesn't exist), we insert.
+        existing = db_core.find_one('settings', {'key': key})
+        if existing:
+            db_core.update('settings', existing['id'], {'value': value})
+        else:
+            # This case shouldn't normally be hit if schema is seeded correctly
+            db_core.insert('settings', {'key': key, 'value': value})
+    return {"success": True, "message": "Settings saved successfully."}

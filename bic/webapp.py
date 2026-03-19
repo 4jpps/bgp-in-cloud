@@ -9,12 +9,16 @@ from bic.core import BIC_DB
 from bic.ui import main_menu as menu_structure
 from bic.ui.schema import UIMenu, UIMenuItem, UIView, UIAction
 from bic.modules import system_management
+from bic.__version__ import __version__
 
 # --- App and Template Setup ---
 app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+
+# --- Global Settings ---
+APP_SETTINGS = {}
 
 # --- Database Dependency ---
 def get_db():
@@ -24,12 +28,10 @@ def get_db():
     finally:
         db.conn.close()
 
-# --- Global Template Context Processor ---
+# --- Global Template Context Processor (The Correct Way) ---
 @templates.context_processor
 def get_global_context(request: Request):
-    db = next(get_db())
-    settings = system_management.get_all_settings(db)
-    return {"settings": settings}
+    return {"settings": APP_SETTINGS, "version": __version__}
 
 # --- Helper function to find schema items ---
 def find_ui_item_by_path(path: str):
@@ -113,6 +115,10 @@ async def system_stats_page(request: Request, db: BIC_DB = Depends(get_db)):
 
 @app.on_event("startup")
 async def startup_event():
+    global APP_SETTINGS
+    db = next(get_db())
+    APP_SETTINGS = system_management.get_all_settings(db)
+    
     from bic.modules import firewall_management
     print("  -> Ensuring NAT rules for private ranges...")
     firewall_management.ensure_nat_rules()

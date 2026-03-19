@@ -13,7 +13,7 @@
         <div class="nav-links">
             {% macro render_menu(items, parent_path='') %}
                 {% for item in items %}
-                    <a href="{{ url_for('render_page', path=item.path.lstrip('/')) }}" 
+                    <a href="{{ url_for('render_page', path=item.path.lstrip('/')) if item.path != '/' else '/' }}" 
                        class="nav-link {% if request.url.path == item.path %}active{% endif %}">
                         {{ item.name }}
                     </a>

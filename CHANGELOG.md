@@ -6,6 +6,11 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0536] - 2026-03-19
+
+### Changed
+- **Consistent UX:** The "Edit Pool Description" feature has been rewritten as a dedicated Textual application, providing a modern, clickable menu that is consistent with the main TUI.
+
 ## [2026.03.19.0533] - 2026-03-19
 
 ### Added

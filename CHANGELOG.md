@@ -2,58 +2,22 @@
 
 All notable changes to this project will be documented in this file.
 
-## [2026.03.19.0429] - 2026-03-19
+This project adheres to [Calendar Versioning](https://calver.org/) using the `YYYY.MM.DD.HHmm` format.
 
-### Fixed
-- Rewrote the TUI main loop to be simpler and more robust, fixing a bug where menu options could not be selected.
-- Corrected a text formatting issue that was causing the time display to be garbled in the TUI header.
+---
 
-### Changed
-- The TUI dashboard no longer attempts to be a "live" view. Instead, the statistics panel now refreshes after every user action, providing a more stable and reliable experience.
-
-## [2026.03.19.0530] - 2026-03-19
-
-### Fixed
-- Made the TUI dashboard more resilient to prevent a `KeyError` crash if statistics data is missing. It will now display "N/A" instead of crashing.
-
-## [2026.03.19.0519] - 2026-03-19
-
-### Fixed
-- Resolved a `KeyError: 'cpu_load'` on startup by correcting the `statistics_management` module to provide the real-time CPU percentage that the TUI dashboard expects.
-
-## [2026.03.19.0511] - 2026-03-19
-
-### Fixed
-- Removed inaccurate reference to Semantic Versioning from the changelog header.
-
-## [2026.03.19.0030] - 2026-03-19
-
-### Changed
-- **Re-implemented Date-Based Versioning.** The project now uses a static, developer-controlled versioning scheme in the format `YYYY.MM.DD.HHmm`. The version is updated manually by developers at release time.
-
-## [1.1.0] - 2026-03-18
+## [2026.03.19.0434] - 2026-03-19
 
 ### Added
-- Implemented a new dashboard-style TUI with a two-column layout, featuring a persistent menu sidebar and a live-updating statistics panel.
+- **New TUI Layout:** The TUI has been completely rewritten with a new layout, placing a live statistics panel on the right and the main working area on the left.
+- **Mouse Support:** Foundational support for mouse clickability has been added to the TUI menu items.
 
-## [1.0.3] - 2026-03-18
-
-### Fixed
-- Fixed a `KeyError: 'title'` crash in the TUI by correctly tracking and displaying the menu navigation path (breadcrumb).
-
-## [1.0.2] - 2026-03-18
+### Changed
+- **Robust Statistics:** The TUI statistics panel is now more resilient and will display "N/A" instead of crashing if a metric is unavailable.
 
 ### Fixed
-- Resolved an `AttributeError` during startup by removing a call to a non-existent function (`synchronize_security_filters`).
+- Resolved a bug where menu items in the TUI were unselectable.
+- Corrected a text formatting issue that was causing the time display to be garbled.
 
-## [1.0.1] - 2026-03-18
+## [Unreleased]
 
-### Fixed
-- Corrected a `sqlite3.OperationalError` that occurred on first run by adding the missing `ip_pools` table definition to the core database schema.
-- Resolved a `ModuleNotFoundError` in the `bic-start.sh` script by executing the TUI as a module (`python -m`) to ensure the project path is correctly recognized.
-- Prevented a `ufw: command not found` error in the installer by adding a check to verify if `ufw` exists before attempting to use it.
-
-## [1.0.0] - 2026-03-18
-
-### Added
-- Initial release of the BGP in the Cloud (BIC) IPAM system.

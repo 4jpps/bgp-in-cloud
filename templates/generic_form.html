@@ -5,16 +5,24 @@
 {% block content %}
     <h1>{{ action.name }}</h1>
     <form method="post">
-        {% for field in action.form_fields %}
+        {% for field in fields %}
             <div>
                 <label for="{{ field.name }}">{{ field.label }}:</label>
-                <input 
-                    type="{{ field.type }}" 
-                    id="{{ field.name }}" 
-                    name="{{ field.name }}" 
-                    {% if field.required %}required{% endif %}
-                    value="{{ data.get(field.name, '') }}"
-                >
+                {% if field.type == "select" %}
+                    <select id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
+                        {% for opt in field.options %}
+                            <option value="{{ opt.value }}" {% if data.get(field.name) == opt.value %}selected{% endif %}>{{ opt.label }}</option>
+                        {% endfor %}
+                    </select>
+                {% else %}
+                    <input 
+                        type="{{ field.type }}" 
+                        id="{{ field.name }}" 
+                        name="{{ field.name }}" 
+                        {% if field.required %}required{% endif %}
+                        value="{{ data.get(field.name, '') }}"
+                    >
+                {% endif %}
             </div>
         {% endfor %}
         <button type="submit">Submit</button>

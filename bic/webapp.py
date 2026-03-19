@@ -82,6 +82,21 @@ async def render_page(request: Request, path: str, db: BIC_DB = Depends(get_db))
             else:
                 data = ui_item.item.loader(db_core=db)
         context["data"] = data
+        # Process fields for select options
+        fields = []
+        for field in ui_item.item.form_fields:
+            fdict = {
+                "name": field.name,
+                "label": field.label,
+                "type": field.type,
+                "required": field.required,
+                "options": [],
+            }
+            if field.type == "select" and field.db_source_table:
+                opts = db.find_all(field.db_source_table)
+                fdict["options"] = [{"value": opt["id"], "label": opt.get(field.db_source_display_key or "name", str(opt))} for opt in opts]
+            fields.append(fdict)
+        context["fields"] = fields
         return templates.TemplateResponse("generic_form.html", context)
 
     raise HTTPException(status_code=404, detail="Invalid page type")

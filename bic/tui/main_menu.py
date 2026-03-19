@@ -64,7 +64,7 @@ Allocated Subnets: {stats['total_subnets']}"""
                 elif isinstance(item.item, UIView):
                     self.app.push_screen(GenericListScreen(self.db_core, item.item))
                 elif isinstance(item.item, UIAction):
-                    if item.path == "/clients/provision":
+                    if item.path == "/clients/provision/new":
                         self.app.push_screen(ProvisionClientScreen(self.db_core))
                     else:
                         self.app.push_screen(GenericFormScreen(self.db_core, item.item))

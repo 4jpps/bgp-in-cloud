@@ -22,8 +22,8 @@ class ProvisionClientScreen(Screen):
         yield Static("Provision New Client", classes="title")
         with Vertical(id="form-container"):
             yield Label("Client Details")
-            yield Input(placeholder="Client Name", id="name")
-            yield Input(placeholder="Client Email", id="email")
+            yield Input(placeholder="Client Name", id="client_name")
+            yield Input(placeholder="Client Email", id="client_email")
             yield Label("Client Type")
             yield Select([("Standard", "Standard"), ("BGP", "BGP")], id="client_type")
             yield Static("IP Assignments", classes="subtitle")
@@ -73,8 +73,8 @@ class ProvisionClientScreen(Screen):
         if event.button.id == "add_assignment":
             self.add_assignment_row()
         elif event.button.id == "submit_button":
-            name = self.query_one("#name", Input).value
-            email = self.query_one("#email", Input).value
+            name = self.query_one("#client_name", Input).value
+            email = self.query_one("#client_email", Input).value
             client_type = self.query_one("#client_type", Select).value
             
             assignments = []

@@ -38,7 +38,7 @@ class MainMenuScreen(Screen):
                 with Vertical(id="menu-container"):
                     for item in self.menu_data.items:
                         if not item.hidden:
-                            yield Button(item.name, id=item.path)
+                            yield Button(item.name, id=item.path.replace('/', '-').lstrip('-'))
             if self.is_root:
                 with Vertical(id="stats-pane"):
                     yield Static("📊 Statistics", classes="title")
@@ -73,7 +73,9 @@ class MainMenuScreen(Screen):
         self.query_one("#stats-display", Static).update(stats_text)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        selected_menu_item = next((item for item in self.menu_data.items if item.path == event.button.id), None)
+        button_id = event.button.id
+        # Find the menu item that corresponds to the sanitized button ID
+        selected_menu_item = next((item for item in self.menu_data.items if item.path.replace('/', '-').lstrip('-') == button_id), None)
         
         if not selected_menu_item:
             return

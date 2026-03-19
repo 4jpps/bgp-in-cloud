@@ -6,6 +6,12 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0544] - 2026-03-19
+
+### Changed
+- **TUI Layout:** The main TUI layout has been adjusted to place the statistics panel on the far right, creating a more balanced and traditional feel.
+- The TUI header now correctly displays the application name, version, and the current time.
+
 ## [2026.03.19.0541] - 2026-03-19
 
 ### Fixed

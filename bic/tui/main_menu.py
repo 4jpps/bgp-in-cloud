@@ -73,10 +73,11 @@ class TuiApp(App):
         self.db_core = db_core
 
     def compose(self) -> ComposeResult:
-        yield Header()
+        """Create child widgets for the app."""
+        yield Header(show_clock=True)
         with Container(id="app-grid"):
             with Vertical(id="menu-pane"):
-                yield Static("Main Menu", id="menu-title")
+                yield Static(f"BGP in the Cloud - v{__version__}", id="menu-title")
                 yield Menu()
                 yield Button("Back", id="back-button", variant="default", disabled=True)
             yield StatsTable(self.db_core, id="stats-pane")

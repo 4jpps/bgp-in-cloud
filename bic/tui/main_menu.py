@@ -54,11 +54,17 @@ class MainMenuScreen(Screen):
 
     def update_stats(self) -> None:
         stats = statistics_management.gather_all_statistics(self.db_core)
-        display = f"""Pools: {stats['total_pools']}
-Clients: {stats['total_clients']}
-Allocated IPs: {stats['total_allocations']}
-Allocated Subnets: {stats['total_subnets']}"""
-        self.query_one("#stats-display", Static).update(display)
+        stats_text = (
+            f"[bold]Clients:[/bold] {stats['total_clients']}\n"
+            f"[bold]IP Pools:[/bold] {stats['total_pools']}\n"
+            f"[bold]Allocated IPs:[/bold] {stats['total_allocations']}\n"
+            f"[bold]Allocated Subnets:[/bold] {stats['total_subnets']}\n\n"
+            f"[bold]Pool Usage:[/bold]\n"
+        )
+        for pool_stat in stats['pool_stats']:
+            stats_text += f"  - {pool_stat['name']}: {pool_stat['usage']:.2f}%\n"
+        
+        self.query_one("#stats-display", Static).update(stats_text)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         button_id = event.button.id
@@ -75,35 +81,6 @@ Allocated Subnets: {stats['total_subnets']}"""
                     else:
                         self.app.push_screen(GenericFormScreen(self.db_core, item.item))
                 break
-        stats_text = (
-            f"[bold]Clients:[/bold] {stats['total_clients']}\n"
-            f"[bold]IP Pools:[/bold] {stats['total_pools']}\n"
-            f"[bold]Allocated IPs:[/bold] {stats['total_allocations']}\n"
-            f"[bold]Allocated Subnets:[/bold] {stats['total_subnets']}\n\n"
-            f"[bold]Pool Usage:[/bold]\n"
-        )
-        for pool_stat in stats['pool_stats']:
-            stats_text += f"  - {pool_stat['name']}: {pool_stat['usage']:.2f}%\n"
-        
-        self.query_one("#stats-display").update(stats_text)
-
-    def on_button_pressed(self, event: Button.Pressed) -> None:
-        selected_menu_item = None
-        for item in self.menu_data.items:
-            if item.path == event.button.id:
-                selected_menu_item = item
-                break
-        
-        if selected_menu_item:
-            item_action = selected_menu_item.item
-            if isinstance(item_action, UIMenu):
-                self.app.push_screen(MainMenuScreen(self.db_core, menu_data=item_action))
-            elif selected_menu_item.path == "/clients/provision/new":
-                self.app.push_screen(ProvisionClientScreen(self.db_core))
-            elif isinstance(item_action, UIAction):
-                self.app.push_screen(GenericFormScreen(self.db_core, item_action))
-            elif isinstance(item_action, UIView):
-                self.app.push_screen(GenericListScreen(self.db_core, item_action))
 
 class BIC_TUI(App):
     """The main Textual application."""

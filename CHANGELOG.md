@@ -6,6 +6,12 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0450] - 2026-03-19
+
+### Fixed
+- **Critical Bug:** Corrected a `SyntaxError` in `network_management.py` that caused the application to crash when accessing IP pool functions.
+- **TUI Layout:** The input prompt is now correctly located within the main working area of the TUI, creating a more cohesive layout.
+
 ## [2026.03.19.0446] - 2026-03-19
 
 ### Fixed

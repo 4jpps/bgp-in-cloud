@@ -32,7 +32,7 @@ Menu > Button {
 
 Menu > Button:hover {
     background: $primary-lighten-2;
-    color: $black;
+    color: black;
 }
 
 #back-button {

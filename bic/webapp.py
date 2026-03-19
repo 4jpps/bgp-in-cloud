@@ -133,11 +133,24 @@ async def provision_client_form(request: Request, db: BIC_DB = Depends(get_db)):
 @app.post("/clients/provision/new", response_class=RedirectResponse)
 async def handle_provision_client(request: Request, db: BIC_DB = Depends(get_db)):
     from bic.modules import client_management
-    form_data = await request.form()
-    form_dict = {k: v for k, v in form_data.items()}
+    form_data_raw = await request.form()
+    form_dict = {k: v for k, v in form_data_raw.items()}
 
-    # Pass the whole form dictionary to the handler
-    client_management.provision_new_client(db_core=db, **form_dict)
+    # Explicitly pop the required arguments from the dictionary.
+    # This ensures they are passed as named arguments and not duplicated in the kwargs.
+    client_name = form_dict.pop("client_name", None)
+    client_email = form_dict.pop("client_email", None)
+    client_type = form_dict.pop("client_type", None)
+
+    # Pass the required arguments by name, and the rest of the form data
+    # (like dynamic assignments) as keyword arguments.
+    client_management.provision_new_client(
+        db_core=db,
+        client_name=client_name,
+        client_email=client_email,
+        client_type=client_type,
+        **form_dict  # The rest of the form items are passed here
+    )
     return RedirectResponse(url="/page/clients/list", status_code=303)
 
 @app.get("/system/statistics", response_class=HTMLResponse)

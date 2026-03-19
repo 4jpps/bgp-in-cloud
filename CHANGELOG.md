@@ -6,6 +6,14 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0550] - 2026-03-19
+
+### Changed
+- The `bic-start.sh` script now automatically checks for code updates via `git pull` before launching.
+
+### Fixed
+- **Critical TUI Crash:** Corrected an `AttributeError` that occurred when opening the "Edit Pool" screen.
+
 ## [2026.03.19.0544] - 2026-03-19
 
 ### Changed

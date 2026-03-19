@@ -4,6 +4,10 @@
 # Get the directory where the script is located
 BASE_DIR=$(dirname "$0")
 
+# --- Auto-Update ---
+echo "Checking for code updates..."
+git pull
+
 # Activate Python virtual environment
 # shellcheck source=/dev/null
 source "$BASE_DIR/venv/bin/activate"

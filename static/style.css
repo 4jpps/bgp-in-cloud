@@ -37,13 +37,16 @@ body {
     display: inline-block;
 }
 
-.nav-button {
+.nav-button,
+.nav-button-link {
     background-color: #21262d;
     color: #c9d1d9;
     padding: 10px 15px;
     font-size: 16px;
     border: none;
     cursor: pointer;
+    text-decoration: none; /* For links styled as buttons */
+    display: inline-block; /* For links styled as buttons */
 }
 
 .dropdown-content {

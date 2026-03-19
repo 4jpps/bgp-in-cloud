@@ -13,15 +13,8 @@ git pull
 source "$BASE_DIR/venv/bin/activate"
 
 # --- Dependency Check ---
-echo "Verifying Python dependencies..."
-pip freeze > installed.txt
-if ! diff -q installed.txt <(grep -vE "^#" requirements.txt | sort); then
-    echo "-> Dependencies are out of date. Installing..."
-    pip install -r requirements.txt
-else
-    echo "-> Dependencies are up to date."
-fi
-rm installed.txt
+echo "Checking dependencies..."
+pip install -r requirements.txt | grep -v "Requirement already satisfied"
 
 # Default to TUI if no argument is provided
 MODE=${1:---tui}

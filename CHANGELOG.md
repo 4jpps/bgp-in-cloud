@@ -6,6 +6,14 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0722] - 2026-03-19
+
+### Changed
+- **Startup Script:** The `bic-start.sh` script now provides cleaner, more concise output when checking for dependencies.
+
+### Fixed
+- **Web App Crash:** Corrected a `TypeError` in the web UI by adding robust logic to handle nested submenus in the navigation.
+
 ## [2026.03.19.0715] - 2026-03-19
 
 ### Fixed

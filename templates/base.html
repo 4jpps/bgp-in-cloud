@@ -7,23 +7,25 @@
     <link href="{{ url_for('static', path='/style.css') }}" rel="stylesheet">
 </head>
 <body>
+    {% macro render_menu(menu_items) %}
+        {% for name, item in menu_items.items() %}
+            {% if item.type == 'submenu' %}
+                <div class="nav-dropdown">
+                    <button class="nav-button">{{ name }}</button>
+                    <div class="dropdown-content">
+                        {{ render_menu(item.handler) }}
+                    </div>
+                </div>
+            {% else %}
+                 <a href="{{ item.nav_path if item.nav_path else '/action/' + item.handler }}" class="nav-button-link">{{ name }}</a>
+            {% endif %}
+        {% endfor %}
+    {% endmacro %}
+
     <nav class="navbar">
         <a href="/" class="nav-brand">BIC IPAM</a>
         <div class="nav-links">
-            {% for name, item in menu.items() %}
-                {% if item.type == 'submenu' %}
-                    <div class="nav-dropdown">
-                        <button class="nav-button">{{ name }}</button>
-                        <div class="dropdown-content">
-                            {% for sub_name, sub_item in item.handler.items() %}
-                                <a href="{{ sub_item.nav_path if sub_item.nav_path else '/action/' + sub_item.handler }}">{{ sub_name }}</a>
-                            {% endfor %}
-                        </div>
-                    </div>
-                {% else %}
-                    <a href="{{ item.nav_path if item.nav_path else '/action/' + item.handler }}" class="nav-button">{{ name }}</a>
-                {% endif %}
-            {% endfor %}
+            {{ render_menu(menu) }}
         </div>
     </nav>
     <div class="container">

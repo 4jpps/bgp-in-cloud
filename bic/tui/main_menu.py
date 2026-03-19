@@ -55,7 +55,11 @@ class Menu(Static):
     def update_menu(self) -> None:
         current_menu_level = MENU_STACK[-1]
         self.remove_children()
-        buttons = [Button(item, id=item, variant="success") for item in current_menu_level.keys()]
+        buttons = []
+        for item in current_menu_level.keys():
+            # Sanitize the menu item label to create a valid ID
+            sanitized_id = item.replace(" ", "_").lower()
+            buttons.append(Button(item, id=sanitized_id, variant="success"))
         self.mount_all(buttons)
 
 class TuiApp(App):
@@ -94,12 +98,20 @@ class TuiApp(App):
             return
 
         current_menu_level = MENU_STACK[-1]
-        if button_id in current_menu_level:
-            selected_item = current_menu_level[button_id]
+        
+        # Find the original menu item label from the sanitized button_id
+        original_item_label = ""
+        for key in current_menu_level.keys():
+            if key.replace(" ", "_").lower() == button_id:
+                original_item_label = key
+                break
+        
+        if original_item_label in current_menu_level:
+            selected_item = current_menu_level[original_item_label]
 
             if selected_item['type'] == 'submenu':
                 MENU_STACK.append(selected_item['handler'])
-                PATH_TITLES.append(button_id)
+                PATH_TITLES.append(original_item_label)
                 self.update_menu_view()
             elif selected_item['type'] == 'action':
                 with self.suspend():

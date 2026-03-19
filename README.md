@@ -45,6 +45,25 @@ The application can be started using the `bic-start.sh` script, which accepts a 
     ```
     The web interface will be available at `http://127.0.0.1:8000` by default.
 
+## Updating
+
+To update your instance of BGP in the Cloud to the latest version, follow these steps:
+
+1.  **Navigate to the project directory**:
+    ```bash
+    cd /path/to/bgp-in-cloud
+    ```
+
+2.  **Pull the latest changes** from the Git repository:
+    ```bash
+    git pull origin master
+    ```
+
+3.  **Re-run the installer** to update dependencies and apply any new system configurations:
+    ```bash
+    sudo ./bic-installer.sh
+    ```
+
 ## Project Architecture
 
 The architecture is designed to be modular and definition-driven, ensuring that both the TUI and Web UI are powered by the same consistent backend logic.

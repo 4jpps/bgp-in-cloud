@@ -1,19 +1,45 @@
-Copyright (c) 2026 Jeff Parrish PC Services
+END-USER LICENSE AGREEMENT (EULA)
 
-All Rights Reserved.
+This End-User License Agreement ("EULA") is a legal agreement between you and Jeff Parrish PC Services.
 
-Permission to use, copy, modify, and distribute this software and its
-documentation for any purpose and without fee is hereby granted,
-provided that the above copyright notice appear in all copies and that
-both that copyright notice and this permission notice appear in
-supporting documentation, and that the name of Jeff Parrish PC Services not be
-used in advertising or publicity pertaining to distribution of the
-software without specific, written prior permission.
+This EULA governs your acquisition and use of our BGP in the Cloud (BIC) software ("Software") directly from Jeff Parrish PC Services or indirectly through a Jeff Parrish PC Services authorized reseller or distributor (a "Reseller").
 
-JEFF PARRISH PC SERVICES DISCLAIMS ALL WARRANTIES WITH REGARD TO THIS
-SOFTWARE, INCLUDING ALL IMPLIED WARRANTIES OF MERCHANTABILITY AND
-FITNESS, IN NO EVENT SHALL JEFF PARRISH PC SERVICES BE LIABLE FOR
-ANY SPECIAL, INDIRECT OR CONSEQUENTIAL DAMAGES OR ANY DAMAGES
-WHATSOEVER RESULTING FROM LOSS OF USE, DATA OR PROFITS, WHETHER IN AN
-ACTION OF CONTRACT, NEGLIGENCE OR OTHER TORTIOUS ACTION, ARISING OUT
-OF OR IN CONNECTION WITH THE USE OR PERFORMANCE OF THIS SOFTWARE.
+Please read this EULA carefully before completing the installation process and using the BGP in the Cloud (BIC) software. It provides a license to use the BGP in the Cloud (BIC) software and contains warranty information and liability disclaimers.
+
+If you register for a free trial of the BGP in the Cloud (BIC) software, this EULA will also govern that trial. By installing and/or using the BGP in the Cloud (BIC) software, you are confirming your acceptance of the Software and agreeing to become bound by the terms of this EULA.
+
+If you are entering into this EULA on behalf of a company or other legal entity, you represent that you have the authority to bind such entity and its affiliates to these terms and conditions. If you do not have such authority or if you do not agree with the terms and conditions of this EULA, do not install or use the Software, and you must not accept this EULA.
+
+This EULA shall apply only to the Software supplied by Jeff Parrish PC Services herewith regardless of whether other software is referred to or described herein. The terms also apply to any Jeff Parrish PC Services updates, supplements, Internet-based services, and support services for the Software, unless other terms accompany those items on delivery. If so, those terms apply.
+
+### License Grant
+
+Jeff Parrish PC Services hereby grants you a personal, non-transferable, non-exclusive licence to use the BGP in the Cloud (BIC) software on your devices in accordance with the terms of this EULA.
+
+You are permitted to load the BGP in the Cloud (BIC) software (for example on a PC, server, or workstation) under your control. You are responsible for ensuring your device meets the minimum requirements of the BGP in the Cloud (BIC) software.
+
+You are not permitted to:
+
+- Edit, alter, modify, adapt, translate or otherwise change the whole or any part of the Software nor permit the whole or any part of the Software to be combined with or become incorporated in any other software, nor decompile, disassemble or reverse engineer the Software or attempt to do any such things
+- Reproduce, copy, distribute, resell or otherwise use the Software for any commercial purpose
+- Allow any third party to use the Software on behalf of or for the benefit of any third party
+- Use the Software in any way which breaches any applicable local, national or international law
+- use the Software for any purpose that Jeff Parrish PC Services considers is a breach of this EULA agreement
+
+### Intellectual Property and Ownership
+
+Jeff Parrish PC Services shall at all times retain ownership of the Software as originally downloaded by you and all subsequent downloads of the Software by you. The Software (and the copyright, and other intellectual property rights of whatever nature in the Software, including any modifications made thereto) are and shall remain the property of Jeff Parrish PC Services.
+
+**Copyright (c) 2026 Jeff Parrish PC Services. All Rights Reserved.**
+
+### Third-Party Modules
+
+This Software is designed to be extended by third-party modules. The terms for the development, distribution, and use of such modules are governed by a separate agreement, detailed in the `MODULE_DEVELOPMENT.md` file. Jeff Parrish PC Services makes no warranties and assumes no liability for the functionality, security, or performance of any third-party modules.
+
+### Disclaimer of Warranty
+
+The Software is provided "AS IS" without warranty of any kind. Jeff Parrish PC Services disclaims all warranties, whether express, implied, or statutory, including but not limited to the implied warranties of merchantability, fitness for a particular purpose, and non-infringement. The entire risk as to the quality and performance of the Software is with you.
+
+### Limitation of Liability
+
+In no event shall Jeff Parrish PC Services be liable for any special, indirect, or consequential damages whatsoever resulting from loss of use, data, or profits, whether in an action of contract, negligence, or other tortious action, arising out of or in connection with the use or performance of this software.

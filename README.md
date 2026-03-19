@@ -59,3 +59,7 @@ This is a proprietary commercial product.
 **Copyright (c) 2026 Jeff Parrish PC Services. All Rights Reserved.**
 
 For full license details, please see the `LICENSE` file included in this repository.
+
+### Third-Party Modules
+
+This application supports a growing ecosystem of third-party modules. For information on developing, distributing, and using modules, please see the `MODULE_DEVELOPMENT.md` file.

@@ -13,6 +13,5 @@ env/
 *.db
 *.sqlite3
 
-# Temporary Files
-*~
-.snapshots/
+# Build artifacts
+VERSION

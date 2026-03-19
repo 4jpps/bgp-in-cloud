@@ -17,7 +17,6 @@ def setup_host_networking(db_core: BIC_DB):
     
     # Synchronize all BIRD configurations
     bird_management.synchronize_bird_prefix_filters(db_core)
-    bird_management.synchronize_security_filters(db_core)
     bird_management.reload_bird_config()
 
     if forwarding_changed:

@@ -39,6 +39,7 @@ class BIC_DB:
                 'id INTEGER PRIMARY KEY AUTOINCREMENT',
                 'name TEXT UNIQUE NOT NULL',
                 'email TEXT',
+                'type TEXT',
                 'asn INTEGER',
                 'allow_smtp BOOLEAN DEFAULT 0 NOT NULL'
             ])
@@ -184,6 +185,13 @@ class BIC_DB:
             self.conn.execute("PRAGMA user_version = 8")
             self.conn.commit()
             user_version = 8
+
+        if user_version < 9:
+            # Version 9: Add client type
+            self.add_column_if_not_exists('clients', 'type', 'TEXT')
+            self.conn.execute("PRAGMA user_version = 9")
+            self.conn.commit()
+            user_version = 9
 
     def create_table_if_not_exists(self, table_name, columns):
         query = f"CREATE TABLE IF NOT EXISTS {table_name} ({ ', '.join(columns)})"

@@ -44,8 +44,7 @@ class MainMenuScreen(Screen):
             with Vertical(id="stats-pane"):
                 yield Static("📊 Statistics", classes="title")
                 yield Static(id="stats-display")
-        with Vertical(id="footer-container"):
-            yield Static(f"Copyright {year} Jeff Parrish PC Services - v{__version__}", id="copyright")
+        yield Static(f"Copyright {year} Jeff Parrish PC Services - v{__version__}", id="copyright")
 
     def on_mount(self) -> None:
         self.update_stats()
@@ -108,6 +107,8 @@ class BIC_TUI(App):
         self.db_core = db_core
 
     def on_mount(self) -> None:
+        brand_name = self.db_core.get_setting('branding_company_name', 'BGP in the Cloud')
+        self.title = f"{brand_name} - BGP in the Cloud"
         self.push_screen(MainMenuScreen(self.db_core))
 
 if __name__ == "__main__":

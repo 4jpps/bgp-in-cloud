@@ -3,6 +3,7 @@ import os
 
 from textual.app import App, ComposeResult
 from textual.screen import Screen
+from textual.binding import Binding
 from textual.containers import Vertical, Horizontal
 from textual.widgets import Button, Header, Static
 
@@ -18,10 +19,15 @@ from bic.__version__ import __version__
 class MainMenuScreen(Screen):
     """The main menu screen for the TUI."""
 
-    def __init__(self, db_core: BIC_DB, menu_data: UIMenu = menu_structure, *args, **kwargs):
+    BINDINGS = [
+        Binding("b", "app.pop_screen", "Back", show=False), # Initially hidden
+    ]
+
+    def __init__(self, db_core: BIC_DB, menu_data: UIMenu = menu_structure, is_root=True, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.db_core = db_core
         self.menu_data = menu_data
+        self.is_root = is_root
 
     def compose(self) -> ComposeResult:
         year = datetime.date.today().year
@@ -32,23 +38,23 @@ class MainMenuScreen(Screen):
                 with Vertical(id="menu-container"):
                     for item in self.menu_data.items:
                         if not item.hidden:
-                            yield Button(item.name, id=item.path.replace('/', '-').lstrip('-'))
-            # Only show stats pane on the root menu
-            if self.menu_data.name == "Main Menu":
+                            yield Button(item.name, id=item.path)
+            if self.is_root:
                 with Vertical(id="stats-pane"):
                     yield Static("📊 Statistics", classes="title")
                     yield Static(id="stats-display")
         yield Static(f"Copyright {year} Jeff Parrish PC Services - v{__version__}", id="copyright")
 
     def on_mount(self) -> None:
-        # Only manage stats on the main menu
-        if self.menu_data.name == "Main Menu":
+        # Show back button if not the root menu
+        self.get_binding("b").show = not self.is_root
+        
+        if self.is_root:
             self.update_stats()
             self.set_interval(30, self.update_stats)
-        # Focus the first button for keyboard navigation
+        
         try:
-            first_button = self.query_one("Button")
-            first_button.focus()
+            self.query_one("Button").focus()
         except:
             pass
 
@@ -67,20 +73,23 @@ class MainMenuScreen(Screen):
         self.query_one("#stats-display", Static).update(stats_text)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        button_id = event.button.id
-        for item in self.menu_data.items:
-            sanitized_path = item.path.replace('/', '-').lstrip('-')
-            if sanitized_path == button_id:
-                if isinstance(item.item, UIMenu):
-                    self.app.push_screen(MainMenuScreen(self.db_core, item.item))
-                elif isinstance(item.item, UIView):
-                    self.app.push_screen(GenericListScreen(self.db_core, item.item))
-                elif isinstance(item.item, UIAction):
-                    if item.path == "/clients/provision/new":
-                        self.app.push_screen(ProvisionClientScreen(self.db_core))
-                    else:
-                        self.app.push_screen(GenericFormScreen(self.db_core, item.item))
-                break
+        selected_menu_item = next((item for item in self.menu_data.items if item.path == event.button.id), None)
+        
+        if not selected_menu_item:
+            return
+
+        # Handle the special case for provisioning first
+        if selected_menu_item.path == "/clients/provision/new":
+            self.app.push_screen(ProvisionClientScreen(self.db_core))
+            return
+
+        item_action = selected_menu_item.item
+        if isinstance(item_action, UIMenu):
+            self.app.push_screen(MainMenuScreen(self.db_core, menu_data=item_action, is_root=False))
+        elif isinstance(item_action, UIView):
+            self.app.push_screen(GenericListScreen(self.db_core, item_action))
+        elif isinstance(item_action, UIAction):
+            self.app.push_screen(GenericFormScreen(self.db_core, item_action))
 
 class BIC_TUI(App):
     """The main Textual application."""
@@ -94,7 +103,7 @@ class BIC_TUI(App):
     def on_mount(self) -> None:
         brand_name = self.db_core.get_setting('branding_company_name', 'BGP in the Cloud')
         self.title = f"{brand_name} - BGP in the Cloud"
-        self.push_screen(MainMenuScreen(self.db_core))
+        self.push_screen(MainMenuScreen(self.db_core, is_root=True))
 
 if __name__ == "__main__":
     BASE_DIR = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

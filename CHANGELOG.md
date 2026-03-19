@@ -24,6 +24,7 @@ All notable changes to this project will be documented in this file.
 - Client provisioning redirect in generic page route to handle direct URL access.
 - Client provisioning form to display pool descriptions and implement proper Single IP vs Subnet logic: Single IP automatically uses /32 (IPv4) or /128 (IPv6), Subnet shows /29, /27 (IPv4) or /64, /56 (IPv6) options. Updated both web and TUI interfaces.
 - Fixed client provisioning form action URL to correctly POST to the provision route instead of a non-existent action endpoint.
+- Fixed TUI AttributeError by using get_binding() method instead of accessing non-existent bindings attribute.
 
 ### Fixed
 - TUI widget ID generation to use valid identifiers, preventing startup crashes.

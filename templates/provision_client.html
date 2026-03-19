@@ -40,7 +40,7 @@
         <div class="assignment-row">
             <select name="assignment_pool_id" onchange="updatePrefixOptions(this)">
                 {% for pool in pools %}
-                    <option value="{{ pool.id }}" data-cidr="{{ pool.cidr }}">{{ pool.name }}</option>
+                    <option value="{{ pool.id }}" data-cidr="{{ pool.cidr }}">{{ pool.description or pool.name }}</option>
                 {% endfor %}
             </select>
             <select name="assignment_type" onchange="togglePrefixInput(this)">
@@ -62,31 +62,43 @@ function addAssignmentRow() {
     wrapper.appendChild(clone);
     // Initialize prefix options for the new row
     const poolSelect = clone.querySelector('select[name="assignment_pool_id"]');
+    const typeSelect = clone.querySelector('select[name="assignment_type"]');
     updatePrefixOptions(poolSelect);
+    togglePrefixInput(typeSelect);
 }
 
 function togglePrefixInput(selectElement) {
     const prefixSelect = selectElement.nextElementSibling;
-    prefixSelect.style.display = selectElement.value === 'subnet' ? 'inline-block' : 'none';
-}
-
-function updatePrefixOptions(poolSelect) {
-    const prefixSelect = poolSelect.nextElementSibling.nextElementSibling;
+    const poolSelect = selectElement.previousElementSibling;
     const selectedOption = poolSelect.options[poolSelect.selectedIndex];
     const cidr = selectedOption.getAttribute('data-cidr');
     const isIPv6 = cidr.includes(':');
     
-    // Clear existing options
-    prefixSelect.innerHTML = '';
-    
-    // Add appropriate options
-    const options = isIPv6 ? ['/128', '/64', '/56'] : ['/32', '/29', '/27'];
-    options.forEach(prefix => {
-        const option = document.createElement('option');
-        option.value = prefix.substring(1); // Remove the / 
-        option.textContent = prefix;
-        prefixSelect.appendChild(option);
-    });
+    if (selectElement.value === 'static') {
+        // Single IP - hide prefix dropdown
+        prefixSelect.style.display = 'none';
+    } else {
+        // Subnet - show prefix dropdown with appropriate options
+        prefixSelect.style.display = 'inline-block';
+        // Clear existing options
+        prefixSelect.innerHTML = '';
+        
+        // Add appropriate subnet options (exclude /32 and /128)
+        const options = isIPv6 ? ['/64', '/56'] : ['/29', '/27'];
+        options.forEach(prefix => {
+            const option = document.createElement('option');
+            option.value = prefix.substring(1); // Remove the / 
+            option.textContent = prefix;
+            prefixSelect.appendChild(option);
+        });
+    }
+}
+
+function updatePrefixOptions(poolSelect) {
+    // This function is called when pool changes, but we mainly use it to ensure
+    // the prefix options are updated when needed. The actual logic is in togglePrefixInput.
+    const typeSelect = poolSelect.nextElementSibling;
+    togglePrefixInput(typeSelect);
 }
 
 // Add one assignment row to start with

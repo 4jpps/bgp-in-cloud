@@ -32,3 +32,4 @@ All notable changes to this project will be documented in this file.
 - BGP sessions list error handling for missing database table.
 - Browser translation prompts by adding notranslate meta tag.
 - Client provisioning 404 error by fixing menu link to use special route.
+- Direct access 404 for client provisioning by adding redirect in page route.

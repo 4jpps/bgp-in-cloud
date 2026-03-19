@@ -9,7 +9,7 @@ import os
 from bic.core import BIC_DB
 from bic.menus.menu_structure import MENU_STRUCTURE
 from bic.menus.system.statistics import SystemDashboardScreen
-from bic.modules import statistics_management
+from bic.modules import statistics_management, system_management
 from bic.__version__ import __version__
 from bic.menus.network.pools.edit import PoolSelectScreen
 

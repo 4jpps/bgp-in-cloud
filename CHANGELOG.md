@@ -6,6 +6,11 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0627] - 2026-03-19
+
+### Fixed
+- **Critical TUI Crash:** Corrected a `NameError` for `system_management` that prevented the application from launching. This was a regression from a previous fix.
+
 ## [2026.03.19.0624] - 2026-03-19
 
 ### Changed

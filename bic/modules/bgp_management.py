@@ -14,7 +14,8 @@ def list_bgp_sessions(db_core: BIC_DB):
         FROM bgp_sessions s
         JOIN clients c ON s.client_id = c.id
     '''
-    return db_core.conn.execute(query).fetchall()
+    rows = db_core.conn.execute(query).fetchall()
+    return [dict(row) for row in rows]
 
 def create_client_bgp_config(db_core: BIC_DB, client: dict):
     """Generates a BGP session config for our server and returns it as a string."""

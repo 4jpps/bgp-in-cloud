@@ -125,7 +125,9 @@ def list_all_allocations_joined(db_core: BIC_DB):
         LEFT JOIN ip_pools p ON a.pool_id = p.id
         LEFT JOIN clients c ON a.client_id = c.id
     '''
-    return db_core.conn.execute(query).fetchall()
+    rows = db_core.conn.execute(query).fetchall()
+    # Convert sqlite3.Row objects to dictionaries
+    return [dict(row) for row in rows]
 
 def find_free_ip_for_web(db_core: BIC_DB, pool_id: int):
     """Web UI wrapper to find the next available IP and return a result."""

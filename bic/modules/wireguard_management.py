@@ -68,24 +68,28 @@ def add_peer_to_interface(db_core: BIC_DB, server_interface_id: int, client_id: 
         'allowed_ips': peer_allowed_ips,
     })
 
-    # Write the client's config file
-    os.makedirs(BIC_CLIENT_CONF_DIR, exist_ok=True)
-    client_conf_path = os.path.join(BIC_CLIENT_CONF_DIR, f"{peer_name}.conf")
-    client_conf = f"[Interface]\n"
-    client_conf += f"PrivateKey = {client_private_key}\n"
-    client_conf += f"Address = {client_address}\n"
-    client_conf += f"DNS = 1.1.1.1\n\n"
-    client_conf += f"[Peer]\n"
-    client_conf += f"PublicKey = {server_interface['public_key']}\n"
-    client_conf += f"Endpoint = {db_core.get_setting('wg_server_endpoint')}:{server_interface['listen_port']}\n"
-    client_conf += f"AllowedIPs = 0.0.0.0/0, ::/0\n" # Route all traffic
-    with open(client_conf_path, 'w') as f:
-        f.write(client_conf)
-
-    # Rewrite the server config to include the new peer
+    # Rewrite the server config to add the new peer
     write_server_config_from_db(db_core, server_interface_id)
 
-    return client_conf_path, peer_id
+    # Generate client config content to be returned
+    all_settings = {s['key']: s['value'] for s in db_core.find_all('settings')}
+    dns_v4 = all_settings.get('dns_server_ipv4', '1.1.1.1')
+    dns_v6 = all_settings.get('dns_server_ipv6', '2606:4700:4700::1111')
+    wg_endpoint = all_settings.get('wg_server_endpoint', 'your-server.example.com')
+
+    client_conf = "[Interface]\n"
+    client_conf += f"PrivateKey = {client_private_key}\n"
+    client_conf += f"Address = {client_address}\n"
+    client_conf += f"DNS = {dns_v4}, {dns_v6}\n\n"
+
+    client_conf += "[Peer]\n"
+    client_conf += f"PublicKey = {server_interface['public_key']}\n"
+    client_conf += f"Endpoint = {wg_endpoint}:{server_interface['listen_port']}\n"
+    # Route all traffic through the VPN
+    client_conf += "AllowedIPs = 0.0.0.0/0, ::/0\n"
+    client_conf += "PersistentKeepalive = 25\n"
+
+    return client_conf, peer_id
 
 def remove_peer_from_interface(db_core: BIC_DB, peer_id: int):
     """Removes a peer from the DB and rewrites the server config."""
@@ -162,4 +166,17 @@ def rebuild_and_update_peer_allowed_ips(db_core: BIC_DB, client_id: int):
     write_server_config_from_db(db_core, peer['interface_id'])
     
     return {"success": True, "message": "WireGuard peer AllowedIPs updated."}
+
+def list_peers_joined(db_core: BIC_DB):
+    """Lists all WireGuard peers with client and interface info."""
+    query = """
+        SELECT
+            p.id, p.name, p.public_key, p.allowed_ips,
+            c.name as client_name,
+            i.name as interface_name
+        FROM wireguard_peers p
+        LEFT JOIN clients c ON p.client_id = c.id
+        LEFT JOIN wireguard_interfaces i ON p.interface_id = i.id
+    """
+    return db_core.conn.execute(query).fetchall()
 

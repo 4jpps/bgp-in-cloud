@@ -1,6 +1,5 @@
 textual
 rich
-readchar
 fastapi
 uvicorn
 psutil

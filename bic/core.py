@@ -11,6 +11,7 @@ class BIC_DB:
         self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.initialize_schema()
+        self._seed_initial_data()
 
     def get_connection(self):
         """Returns the current database connection."""
@@ -132,6 +133,58 @@ class BIC_DB:
             self.conn.commit()
             user_version = 3
 
+        if user_version < 4:
+            # Version 4: Add bgp_sessions and wireguard_interfaces tables
+            self.create_table_if_not_exists('bgp_sessions', [
+                'id INTEGER PRIMARY KEY AUTOINCREMENT',
+                'client_id INTEGER NOT NULL',
+                'state TEXT NOT NULL DEFAULT \'pending\'',
+                'last_updated DATETIME DEFAULT CURRENT_TIMESTAMP',
+                'FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE'
+            ])
+            self.create_table_if_not_exists('wireguard_interfaces', [
+                'id INTEGER PRIMARY KEY AUTOINCREMENT',
+                'name TEXT NOT NULL UNIQUE',
+                'listen_port INTEGER NOT NULL',
+                'address TEXT NOT NULL',
+                'private_key TEXT NOT NULL',
+                'public_key TEXT NOT NULL'
+            ])
+            self.conn.execute("PRAGMA user_version = 4")
+            self.conn.commit()
+            user_version = 4
+
+        if user_version < 5:
+            # Version 5: Add conf storage to clients table
+            self.add_column_if_not_exists('clients', 'wireguard_conf', 'TEXT')
+            self.add_column_if_not_exists('clients', 'bgp_conf', 'TEXT')
+            self.conn.execute("PRAGMA user_version = 5")
+            self.conn.commit()
+            user_version = 5
+
+        if user_version < 6:
+            # Version 6: Add configurable DNS settings
+            self.insert('settings', {'key': 'dns_server_ipv4', 'value': '1.1.1.1'}, or_ignore=True)
+            self.insert('settings', {'key': 'dns_server_ipv6', 'value': '2606:4700:4700::1111'}, or_ignore=True)
+            self.conn.execute("PRAGMA user_version = 6")
+            self.conn.commit()
+            user_version = 6
+
+        if user_version < 7:
+            # Version 7: Add configurable WG endpoint setting
+            self.insert('settings', {'key': 'wg_server_endpoint', 'value': 'your-server.example.com'}, or_ignore=True)
+            self.conn.execute("PRAGMA user_version = 7")
+            self.conn.commit()
+            user_version = 7
+
+        if user_version < 8:
+            # Version 8: Add branding settings
+            self.insert('settings', {'key': 'branding_company_name', 'value': 'BGP in the Cloud'}, or_ignore=True)
+            self.insert('settings', {'key': 'branding_email_from_name', 'value': 'The BGP in the Cloud Team'}, or_ignore=True)
+            self.conn.execute("PRAGMA user_version = 8")
+            self.conn.commit()
+            user_version = 8
+
     def create_table_if_not_exists(self, table_name, columns):
         query = f"CREATE TABLE IF NOT EXISTS {table_name} ({ ', '.join(columns)})"
         self._execute(query)
@@ -193,3 +246,16 @@ class BIC_DB:
     def __del__(self):
         if self.conn:
             self.conn.close()
+
+    def _seed_initial_data(self):
+        """Seeds the database with essential data like system IP pools if they don't exist."""
+        initial_pools = [
+            {"name": "WG Server P2P IPv4", "cidr": "172.31.0.0/30", "description": "WireGuard server point-to-point network (IPv4)", "afi": "ipv4"},
+            {"name": "WG Server P2P IPv6", "cidr": "fd31::/126", "description": "WireGuard server point-to-point network (IPv6)", "afi": "ipv6"},
+        ]
+
+        for pool in initial_pools:
+            existing = self.find_one('ip_pools', {'name': pool['name']})
+            if not existing:
+                self.insert('ip_pools', pool)
+                print(f"Seeded initial IP Pool: {pool['name']}")

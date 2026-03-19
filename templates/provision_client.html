@@ -1,0 +1,84 @@
+{% extends "base.html" %}
+
+{% block title %}Provision New Client{% endblock %}
+
+{% block content %}
+    <h1>Provision New Client</h1>
+    <form action="/action/clients/provision/new" method="post">
+        <fieldset>
+            <legend>Client Details</legend>
+            <label for="name">Client Name</label>
+            <input type="text" id="name" name="name" required>
+            <label for="email">Client Email</label>
+            <input type="email" id="email" name="email">
+        </fieldset>
+
+        <fieldset>
+            <legend>Client Type</legend>
+            <label for="client_type">Type</label>
+            <select id="client_type" name="client_type">
+                <option value="Standard" selected>Standard (Static IPs/Subnets)</option>
+                <option value="BGP">BGP Peer</option>
+            </select>
+            <small>If BGP is selected, the next available private ASN will be assigned automatically.</small>
+        </fieldset>
+
+        <fieldset id="assignments-container">
+            <legend>IP Assignments</legend>
+            <div id="assignments-wrapper">
+                <!-- Assignment rows will be injected here by JavaScript -->
+            </div>
+            <button type="button" onclick="addAssignmentRow()">+ Add IP/Subnet Assignment</button>
+        </fieldset>
+
+        <hr>
+        <button type="submit">Provision Client</button>
+    </form>
+
+    <!-- Template for a new assignment row -->
+    <template id="assignment-row-template">
+        <div class="assignment-row">
+            <select name="assignment_pool_id">
+                {% for pool in ip_pools %}
+                    <option value="{{ pool.id }}">{{ pool.name }} ({{ pool.cidr }})</option>
+                {% endfor %}
+            </select>
+            <select name="assignment_type" onchange="togglePrefixInput(this)">
+                <option value="static">Single IP</option>
+                <option value="subnet">Subnet</option>
+            </select>
+            <input type="number" name="assignment_prefix" placeholder="Prefix Len" style="display: none;">
+            <button type="button" onclick="this.parentElement.remove()">Remove</button>
+        </div>
+    </template>
+
+<script>
+function addAssignmentRow() {
+    const template = document.getElementById('assignment-row-template');
+    const wrapper = document.getElementById('assignments-wrapper');
+    const clone = template.content.cloneNode(true);
+    wrapper.appendChild(clone);
+}
+
+function togglePrefixInput(selectElement) {
+    const prefixInput = selectElement.nextElementSibling;
+    prefixInput.style.display = selectElement.value === 'subnet' ? 'inline-block' : 'none';
+}
+
+// Add one assignment row to start with
+document.addEventListener('DOMContentLoaded', addAssignmentRow);
+</script>
+
+<style>
+    .assignment-row {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+        margin-bottom: 10px;
+    }
+    .assignment-row select,
+    .assignment-row input {
+        flex-grow: 1;
+    }
+</style>
+{% endblock %}

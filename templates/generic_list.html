@@ -1,0 +1,38 @@
+{% extends "base.html" %}
+
+{% block title %}{{ view.name }}{% endblock %}
+
+{% block content %}
+    <h1>{{ view.name }}</h1>
+    {# Add action buttons here if defined #}
+    <table>
+        <thead>
+            <tr>
+                {% for col in view.columns %}
+                    <th>{{ col.label }}</th>
+                {% endfor %}
+                {% if view.actions %}
+                    <th>Actions</th>
+                {% endif %}
+            </tr>
+        </thead>
+        <tbody>
+            {% for item in items %}
+            <tr>
+                {% for col in view.columns %}
+                    <td>{{ item[col.key] }}</td>
+                {% endfor %}
+                {% if view.actions %}
+                    <td>
+                        {% for action in view.actions %}
+                            <form action="/action{{ current_path }}/{{ action.name | lower | replace(' ', '-') }}/{{ item.id }}" method="get" style="display: inline;">
+                                <button type="submit">{{ action.name }}</button>
+                            </form>
+                        {% endfor %}
+                    </td>
+                {% endif %}
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

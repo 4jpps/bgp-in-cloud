@@ -97,3 +97,24 @@ def _get_smtp_allowed_ips(db_core: BIC_DB) -> list:
                 allowed_ips.append(sub['subnet'])
                 
     return list(set(allowed_ips))
+
+def setup_nat_rules():
+    """Ensures a NAT rule exists for the 172.30.0.0/16 private range."""
+    CONSOLE.print("  -> Ensuring NAT rules for private ranges...")
+    nat_rule = "-s 172.30.0.0/16 -j MASQUERADE"
+    
+    try:
+        # Check if the rule already exists in the POSTROUTING chain of the nat table
+        check_command = f"sudo iptables -t nat -C POSTROUTING {nat_rule}"
+        if subprocess.run(check_command, shell=True, check=False, capture_output=True).returncode != 0:
+            # Rule doesn't exist, so we add it
+            add_command = f"sudo iptables -t nat -A POSTROUTING {nat_rule}"
+            subprocess.run(add_command, shell=True, check=True)
+            CONSOLE.print("    -> Added NAT rule for 172.30.0.0/16.")
+            # Persist the ruleset
+            subprocess.run("sudo netfilter-persistent save", shell=True, check=True)
+        else:
+            CONSOLE.print("    -> NAT rule for 172.30.0.0/16 already exists.")
+
+    except Exception as e:
+        CONSOLE.print(f"[bold red]Error setting up NAT rules: {e}[/bold red]")

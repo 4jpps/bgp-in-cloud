@@ -29,6 +29,90 @@ echo "✅ System packages are up to date."
 echo "
 ▶️ [2/5] Installing core dependencies (Bird2, WireGuard, Python)..."
 apt-get install -y bird2 wireguard python3-venv python3-pip
+
+echo "   -> Creating BIRD configuration directory..."
+mkdir -p /etc/bird/
+
+cat << EOF > /etc/bird/bird.conf
+# ==========================================================
+# JEFF PARRISH PC SERVICES (JPPS) - MANAGED BGP SKELETON
+# Upstream: Route64 (AS212895) | Downstream: IPAM Managed
+# ==========================================================
+
+log syslog all;
+router id 10.255.255.255;
+
+protocol device {
+    scan time 10;
+}
+
+# 1. KERNEL SYNC
+protocol kernel kernel4 {
+    ipv4 { export all; import none; };
+}
+
+protocol kernel kernel6 {
+    ipv6 { export all; import none; };
+}
+
+# 2. UPSTREAM ASSETS (Route64)
+# Populated by bic/modules/network_management.py
+include "/etc/bird/bic_prefixes_v4.conf";
+include "/etc/bird/bic_prefixes_v6.conf";
+
+# 3. UPSTREAM FILTERS (Outbound to Route64)
+# Populated by bic/modules/network_management.py
+include "/etc/bird/bic_filter_v4.conf";
+include "/etc/bird/bic_filter_v6.conf";
+
+# 4. UPLINK SESSIONS
+protocol bgp r64_v4 {
+    local as 401575;
+    neighbor 100.64.212.253 as 212895;
+    ipv4 {
+        import all;
+        export filter out_r64_v4;
+    };
+}
+
+protocol bgp r64_v6 {
+    local as 401575;
+    neighbor 2a11:6c7:f01:be::1 as 212895;
+    multihop;
+    ipv6 {
+        import all;
+        export filter out_r64_v6;
+    };
+}
+
+# 5. CUSTOMER TEMPLATE
+template bgp t_customer {
+    local as 401575;
+    multihop;
+    hold time 30;
+    keepalive time 10;
+    ipv4 {
+        # Security filtering is now handled by the system firewall (iptables)
+        import all;
+        export all;
+        next hop self;
+    };
+    ipv6 {
+        # Security filtering is now handled by the system firewall (iptables)
+        import all;
+        export all;
+        next hop self;
+    };
+}
+
+# 6. DYNAMIC INCLUDES
+# Not currently used, but safe to include as a blank file
+include "/etc/bird/client_filters.conf";
+
+# Populated by bic/modules/bgp_management.py
+include "/etc/bird/peers.conf";
+EOF
+
 echo "✅ Core dependencies installed."
 
 

@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+
+{% block title %}{{ action.name }}{% endblock %}
+
+{% block content %}
+    <h1>{{ action.name }}</h1>
+    <form method="post">
+        {% for field in action.form_fields %}
+            <div>
+                <label for="{{ field.name }}">{{ field.label }}:</label>
+                <input 
+                    type="{{ field.type }}" 
+                    id="{{ field.name }}" 
+                    name="{{ field.name }}" 
+                    {% if field.required %}required{% endif %}
+                    value="{{ initial_data[field.name] if initial_data and field.name in initial_data else field.default if field.default else '' }}"
+                >
+            </div>
+        {% endfor %}
+        <button type="submit">Submit</button>
+    </form>
+{% endblock %}

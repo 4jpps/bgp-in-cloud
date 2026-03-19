@@ -1,0 +1,44 @@
+from dataclasses import dataclass, field
+from typing import List, Dict, Any, Callable, Type
+from textual.screen import Screen
+
+@dataclass
+class FormField:
+    name: str
+    label: str
+    type: str = "text"
+    required: bool = False
+    default: Any = None
+    # For select fields
+    options: List[Any] = field(default_factory=list)
+    # For select_from_db fields
+    db_source_table: str = None
+    db_source_display_key: str = None
+
+@dataclass
+class UIAction:
+    name: str
+    handler: Callable
+    loader: Callable = None # Optional function to load initial form data
+    tui_screen: Type[Screen] = None
+    form_fields: List[FormField] = field(default_factory=list)
+
+@dataclass
+class UIView:
+    name: str
+    handler: Callable
+    tui_screen: Type[Screen] = None
+    columns: List[Dict[str, str]] = field(default_factory=list) # e.g. [{'key': 'name', 'label': 'Client Name'}]
+    actions: List[UIAction] = field(default_factory=list)
+
+@dataclass
+class UIMenuItem:
+    name: str
+    path: str # e.g. "/clients/list"
+    description: str = ""
+    item: Any = None # Can be a UIAction, UIView, or another UIMenu
+
+@dataclass
+class UIMenu:
+    name: str
+    items: List[UIMenuItem] = field(default_factory=list)

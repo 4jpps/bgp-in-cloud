@@ -12,3 +12,6 @@ env/
 # Databases
 *.db
 *.sqlite3
+
+# Local development scripts
+stamp-version.ps1

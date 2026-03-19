@@ -18,10 +18,10 @@ When preparing a new release, the following steps must be taken:
 
 1.  **Update the Changelog:** Add a new version header to `CHANGELOG.md`. List all significant `Added`, `Changed`, `Fixed`, and `Removed` items under the new version.
 
-2.  **Update the Version File:** The version is controlled by the `bic/__version__.py` file. To stamp a new version, run the following Python command from the root of the repository. This will overwrite the file with the current UTC date and time in the correct format.
+2.  **Update the Version File:** The version is controlled by the `bic/__version__.py` file. To stamp a new version, developers using PowerShell should run the `stamp-version.ps1` script from the root of the repository. This will overwrite the file with the current UTC date and time in the correct format.
 
-    ```bash
-    python -c "from datetime import datetime; from zoneinfo import ZoneInfo; v = datetime.now(tz=ZoneInfo('America/Chicago')).astimezone(ZoneInfo('UTC')).strftime('%Y.%m.%d.%H%M'); open('bic/__version__.py', 'w').write(f'__version__ = \"{v}\"\n')"
+    ```powershell
+    .\stamp-version.ps1
     ```
 
 3.  **Commit the Changes:** Commit the updated `CHANGELOG.md` and `bic/__version__.py` files with a message like `Release: Version YYYY.MM.DD.HHmm`.

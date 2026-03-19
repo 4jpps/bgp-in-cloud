@@ -177,7 +177,7 @@ def swap_pool_prefix(db_core: BIC_DB, pool_id: int, new_cidr: str):
     # After swapping a public pool, BIRD config should be updated
     update_bird_export_config(db_core)
 
-    return {"success": True, "message": f"Successfully swapped prefix for pool '{pool["name"]}'."}
+    return {"success": True, "message": f"Successfully swapped prefix for pool '{pool['name']}'."}
 
 
 def find_and_allocate_subnet(db_core: BIC_DB, pool_id: int, prefix_length: int):

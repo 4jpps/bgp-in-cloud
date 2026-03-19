@@ -16,6 +16,12 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 ### Changed
 - The TUI now uses a CSS file (`main_menu.css`) for styling and layout.
 
+## [2026.03.19.0501] - 2026-03-19
+
+### Fixed
+- **Critical Bug:** Corrected a `SyntaxError` in `network_management.py` that caused the application to crash when accessing IP pool functions.
+- **TUI Overhaul:** The TUI has been completely rewritten using the Textual framework to provide a stable, modern, GUI-like experience with native mouse support for all menu buttons.
+
 ## [2026.03.19.0450] - 2026-03-19
 
 ### Fixed

@@ -1,6 +1,11 @@
 # Changelog
 
-All notable changes to this project will be documented in this file, and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+All notable changes to this project will be documented in this file.
+
+## [2026.03.19.0045] - 2026-03-19
+
+### Fixed
+- Removed inaccurate reference to Semantic Versioning from the changelog header.
 
 ## [2026.03.19.0030] - 2026-03-19
 

@@ -6,6 +6,11 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0633] - 2026-03-19
+
+### Fixed
+- **Web App Crash:** Corrected a `RuntimeError` that prevented the web application from starting by creating the required `static` directory.
+
 ## [2026.03.19.0630] - 2026-03-19
 
 ### Changed

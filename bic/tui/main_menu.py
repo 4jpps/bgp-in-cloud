@@ -48,10 +48,10 @@ class MainMenuScreen(Screen):
 
     def update_stats(self) -> None:
         stats = statistics_management.gather_all_statistics(self.db_core)
-        display = f"""Pools: {stats['ipam']['pools']}
-Clients: {stats['ipam']['clients']}
-Allocated IPs: {stats['ipam']['single_ips_allocated']}
-Allocated Subnets: {stats['ipam']['subnets_allocated']}"""
+        display = f"""Pools: {stats['total_pools']}
+Clients: {stats['total_clients']}
+Allocated IPs: {stats['total_allocations']}
+Allocated Subnets: {stats['total_subnets']}"""
         self.query_one("#stats-display", Static).update(display)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:

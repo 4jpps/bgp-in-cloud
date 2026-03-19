@@ -25,7 +25,10 @@ This document provides a detailed breakdown of each file and directory in the pr
   - **Purpose**: The main project entry point, providing a high-level overview, feature list, and getting-started guide.
 
 - **`DOCUMENTATION.md`** (This file)
-  - **Purpose**: In-depth technical reference for developers.
+  - **Purpose**: In-depth technical reference for the project's architecture.
+
+- **`DEVELOPER_GUIDE.md`**
+  - **Purpose**: A comprehensive guide for developers on how to create new menus and modules.
 
 ---
 

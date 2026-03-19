@@ -41,14 +41,27 @@ def regenerate_client_configs(db_core: BIC_DB, client_id: int):
 
     return {"success": True, "client_id": client_id}
 
-def update_client_details(db_core: BIC_DB, client_id: int, new_name: str, new_email: str):
-    """Updates a client's name and email."""
-    db_core.update('clients', client_id, {'name': new_name, 'email': new_email})
+def update_client_details(db_core: BIC_DB, client_id: int, new_name: str, new_email: str, new_type: str):
+    """Updates a client's name, email, and type."""
+    db_core.update('clients', client_id, {'name': new_name, 'email': new_email, 'type': new_type})
     return {"success": True, "message": "Client details updated."}
 
-def edit_client_from_form(db_core: BIC_DB, id: int, name: str, email: str):
+def edit_client_from_form(db_core: BIC_DB, id: int, name: str, email: str, type: str):
     """Wrapper for web form to edit a client."""
-    return update_client_details(db_core=db_core, client_id=id, new_name=name, new_email=email)
+    return update_client_details(db_core=db_core, client_id=id, new_name=name, new_email=email, new_type=type)
+
+def deprovision_and_delete_client(db_core: BIC_DB, client_id: int):
+    """De-allocates all resources and deletes a client."""
+    # Deallocate all IPs
+    db_core.conn.execute("DELETE FROM ip_allocations WHERE client_id = ?", (client_id,))
+    # Deallocate all subnets
+    db_core.conn.execute("DELETE FROM ip_subnets WHERE client_id = ?", (client_id,))
+    # Delete WireGuard peer
+    db_core.conn.execute("DELETE FROM wireguard_peers WHERE client_id = ?", (client_id,))
+    # Delete the client
+    db_core.delete("clients", client_id)
+    db_core.conn.commit()
+    return {"success": True, "message": "Client and all associated resources have been deleted."}
 
 def delete_client_from_form(db_core: BIC_DB, id: int, **kwargs):
     """Wrapper for web form to delete a client."""

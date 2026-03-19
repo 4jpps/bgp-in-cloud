@@ -4,7 +4,7 @@
 
 {% block content %}
     <h1>{{ action.name }}</h1>
-    <form method="post">
+    <form method="post" action="{{ url_for('handle_form_post', path=current_path.lstrip('/')) }}">
         {% for field in fields %}
             <div>
                 <label for="{{ field.name }}">{{ field.label }}:</label>
@@ -50,4 +50,38 @@
     </div>
     {% endif %}
 
+    {% if action.actions %}
+    <div class="mt-8">
+        {% for sub_action_item in action.actions %}
+            <div class="card mb-4">
+                <h2 class="text-xl font-semibold mb-4">{{ sub_action_item.item.name }}</h2>
+                <form method="post" action="{{ url_for('handle_form_post', path=sub_action_item.path.lstrip('/')) }}">
+                    <input type="hidden" name="client_id" value="{{ data.id }}">
+                    {% for field in sub_action_item.item.form_fields %}
+                        {% if field.type != 'hidden' %}
+                        <div>
+                            <label for="{{ field.name }}">{{ field.label }}:</label>
+                             {% if field.type == "select" %}
+                                <select id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
+                                    {% for opt in field.options %}
+                                        <option value="{{ opt.value }}">{{ opt.label }}</option>
+                                    {% endfor %}
+                                </select>
+                            {% else %}
+                                <input 
+                                    type="{{ field.type }}" 
+                                    id="{{ field.name }}" 
+                                    name="{{ field.name }}" 
+                                    {% if field.required %}required{% endif %}
+                                >
+                            {% endif %}
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                    <button type="submit">Submit</button>
+                </form>
+            </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 {% endblock %}

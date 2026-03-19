@@ -194,19 +194,35 @@ def delete_pool_from_form(db_core: BIC_DB, id: int):
     """Wrapper for UI form to delete a pool."""
     return delete_pool(db_core=db_core, pool_id=int(id))
 
-def list_all_allocations_joined(db_core: BIC_DB):
-    """Lists all IP allocations and joins them with pool and client info."""
-    query = '''
-        SELECT
-            a.id, a.ip_address, a.description,
-            p.name as pool_name,
-            c.name as client_name
-        FROM ip_allocations a
-        LEFT JOIN ip_pools p ON a.pool_id = p.id
-        LEFT JOIN clients c ON a.client_id = c.id
-    '''
-    rows = db_core.conn.execute(query).fetchall()
     return [dict(row) for row in rows]
+
+def allocate_next_available_subnet(db_core: BIC_DB, pool_id: int, prefix_len: int, client_id: int, description: str):
+    """Finds the next available subnet and allocates it to a client."""
+    pool = db_core.find_one("ip_pools", {"id": pool_id})
+    if not pool:
+        return None, "Pool not found."
+    
+    parent_network = ipaddress.ip_network(pool['cidr'])
+    existing_subnets = [ipaddress.ip_network(s['subnet']) for s in db_core.find_all_by('ip_subnets', {'pool_id': pool_id})]
+
+    for candidate_subnet in parent_network.subnets(new_prefix=prefix_len):
+        is_available = True
+        for existing in existing_subnets:
+            if candidate_subnet.overlaps(existing):
+                is_available = False
+                break
+        if is_available:
+            # Found a free subnet, allocate it
+            new_subnet = {
+                'pool_id': pool_id,
+                'client_id': client_id,
+                'subnet': str(candidate_subnet),
+                'description': description
+            }
+            db_core.insert('ip_subnets', new_subnet)
+            return str(candidate_subnet), "Subnet allocated successfully."
+
+    return None, "No available subnets of the requested size."
 
 def deallocate_and_remove(db_core: BIC_DB, assignment_type: str, assignment_id: int):
     """Deallocates an IP or subnet and removes it from the database."""

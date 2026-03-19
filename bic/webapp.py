@@ -113,6 +113,19 @@ async def handle_form_post(request: Request, path: str, db: BIC_DB = Depends(get
     
     form_data = await request.form()
     form_dict = {k: v for k, v in form_data.items()}
+
+    # A bit of a hack to handle the nested action form
+    if path.endswith("/add-subnet"):
+        from bic.modules import network_management
+        network_management.allocate_next_available_subnet(
+            db_core=db, 
+            pool_id=int(form_dict['pool_id']),
+            prefix_len=int(form_dict['prefix_len']),
+            client_id=int(form_dict['client_id']),
+            description=form_dict['description']
+        )
+        return RedirectResponse(url=f"/page/clients/edit?id={form_dict['client_id']}", status_code=303)
+
     handler_kwargs = {"db_core": db, **form_dict}
     ui_item.item.handler(**handler_kwargs)
     

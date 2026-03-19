@@ -1,6 +1,17 @@
-from bic.ui.schema import UIMenu, UIMenuItem, UIView, UIAction, FormField
-from bic.modules import client_management
+from bic.ui.schema import UIMenu, UIMenuItem, UIView, UIAction, FormField, FormSelectOption
+from bic.modules import client_management, network_management
 from bic.core import BIC_DB
+
+def get_ip_pool_options(db_core: BIC_DB):
+    pools = db_core.find_all("ip_pools")
+    return [FormSelectOption(label=p['name'], value=p['id']) for p in pools]
+
+def get_client_type_options(db_core: BIC_DB):
+    # In the future, this could come from a dedicated table
+    return [
+        FormSelectOption(label="Standard", value="Standard"),
+        FormSelectOption(label="Transit", value="Transit"),
+    ]
 
 # Loader function for the edit form
 def load_client_for_edit(db_core: BIC_DB, id: int):
@@ -11,6 +22,17 @@ def load_client_for_edit(db_core: BIC_DB, id: int):
     return client
 
 # Define Actions
+add_subnet_action = UIAction(
+    name="Add Subnet",
+    handler=network_management.allocate_next_available_subnet,
+    form_fields=[
+        FormField(name="client_id", type="hidden"),
+        FormField(name="pool_id", label="Subnet Pool", type="select", options_loader=get_ip_pool_options, required=True),
+        FormField(name="prefix_len", label="Prefix Length", type="number", required=True),
+        FormField(name="description", label="Description", required=True),
+    ]
+)
+
 edit_client_action = UIAction(
     name="Edit Client",
     handler=client_management.edit_client_from_form,
@@ -19,6 +41,10 @@ edit_client_action = UIAction(
         FormField(name="id", type="hidden"),
         FormField(name="name", label="Name", required=True),
         FormField(name="email", label="Email", type="email"),
+        FormField(name="type", label="Client Type", type="select", options_loader=get_client_type_options, required=True),
+    ],
+    actions=[
+        UIMenuItem(name="Add Subnet", path="/clients/add-subnet", item=add_subnet_action)
     ]
 )
 
@@ -35,7 +61,6 @@ delete_client_action = UIAction(
 def send_email_handler(db_core: BIC_DB, id: int):
     from bic.modules.email_notifications import send_client_welcome_email
     send_client_welcome_email(db_core, id)
-    # This handler needs to return a dict for the web UI, even if it's just a success message
     return {"success": True, "message": "Welcome email sent successfully."}
 
 send_welcome_email_action = UIAction(
@@ -56,6 +81,7 @@ view_clients = UIView(
         {"key": "id", "label": "ID"},
         {"key": "name", "label": "Name"},
         {"key": "email", "label": "Email"},
+        {"key": "type", "label": "Type"},
     ],
     actions=[
         UIMenuItem(name="Edit", path="/clients/edit", item=edit_client_action),
@@ -74,5 +100,6 @@ client_menu = UIMenu(
         UIMenuItem(name="Edit Client", path="/clients/edit", item=edit_client_action, hidden=True),
         UIMenuItem(name="Delete Client", path="/clients/delete", item=delete_client_action, hidden=True),
         UIMenuItem(name="Send Welcome Email", path="/clients/send-email", item=send_welcome_email_action, hidden=True),
+        UIMenuItem(name="Add Subnet", path="/clients/add-subnet", item=add_subnet_action, hidden=True),
     ]
 )

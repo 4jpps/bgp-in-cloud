@@ -69,6 +69,13 @@ class BIC_DB:
             'FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE',
         ])
 
+        self.create_table_if_not_exists('ip_pools', [
+            'id INTEGER PRIMARY KEY AUTOINCREMENT',
+            'name TEXT UNIQUE NOT NULL',
+            'cidr TEXT UNIQUE NOT NULL',
+            'description TEXT'
+        ])
+
         self.insert_or_replace('settings', {'key': 'bgp_local_asn', 'value': '401575'})
 
     def create_table_if_not_exists(self, table_name, columns):

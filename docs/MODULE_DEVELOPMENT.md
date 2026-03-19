@@ -1,29 +1,81 @@
-# Third-Party Module Development
+# BIC IPAM Module Development Guide
 
-## Our Philosophy
+This guide provides technical standards and best practices for writing functions within the `bic/modules/` directory. Adhering to these standards is crucial for maintaining the stability and consistency of the application.
 
-BGP in the Cloud (BIC) is a commercial, proprietary product. However, we strongly believe in the power of a vibrant developer ecosystem. To facilitate this, we have adopted a licensing model that allows third-party developers to create, distribute, and even sell their own modules that extend the functionality of the core BIC application.
+---
 
-This model is designed to be as open and developer-friendly as possible while protecting the intellectual property of the core product.
+## Core Principles
 
-## The Licensing Model: Proprietary Core with a Permissive API
+1.  **Pure Business Logic**: Modules in this directory must contain *only* business logic. They should have no knowledge of the user interface. Functions should not print to the console (unless for specific, unavoidable error logging), nor should they contain any HTML, Textual widgets, or other presentation-layer code.
 
-- **Core Application:** The core BIC software is licensed under a proprietary End-User License Agreement (EULA). You can find the full terms in the `LICENSE` file. This means you may not modify or redistribute the core application.
+2.  **Database is the Entry Point**: All module functions that interact with data should accept the `db_core: BIC_DB` object as their first argument. This dependency injection ensures that all database operations go through the centralized `BIC_DB` class in `bic/core.py`.
 
-- **Module API & SDK:** To build modules, you will use the official BGP in the Cloud (BIC) API and Software Development Kit (SDK). The API/SDK is licensed under the **MIT License**, a permissive open-source license. This gives you broad permissions to create derivative works (your modules) without imposing viral open-source obligations on your code.
+3.  **Stateless Operations**: Functions should be as stateless as possible. All the information they need to perform an operation should be passed in as arguments. They should read from the database for state and write back to the database to persist changes.
 
-## Module Ownership and Licensing
+---
 
-- **You Own Your Module:** As a third-party developer, you retain full copyright and intellectual property ownership of your module's source code.
+## Function Signatures and Return Values
 
-- **Module Licensing Requirement:** To ensure a healthy and legally unambiguous ecosystem, all third-party modules created for BIC **must** be licensed under a permissive open-source license. We require either the **MIT License** or the **Apache License 2.0**.
+To ensure compatibility with the generic UI rendering engines, your handler functions should follow these conventions.
 
-- **Distribution:** You are free to distribute your module as you see fit. You can offer it for free on a public repository (like GitHub) or sell it commercially through your own channels. Your module's license (MIT or Apache 2.0) gives end-users the right to use it, while your own terms of sale can govern the commercial transaction.
+### For `UIView` Handlers
 
-## Contributor License Agreement (CLA) for Core Contributions
+These functions are used to fetch lists of data for display in tables.
 
-If you wish to contribute to the *core* BGP in the Cloud (BIC) product itself (i.e., not a separate module), you will be required to sign a Contributor License Agreement (CLA). This agreement grants Jeff Parrish PC Services the necessary rights to incorporate your contribution into the proprietary core product. Please contact us directly if you are interested in contributing to the core.
+- **Signature**: `def my_list_handler(db_core: BIC_DB) -> list[dict]:`
+- **Returns**: The function **must** return a `list` of `dict`s. Each dictionary in the list represents a row, and the keys of the dictionary should correspond to the `key` values you define in the `UIView`'s `columns`.
 
-## Legal Disclaimer
+```python
+# In bic/modules/client_management.py
 
-This document provides a summary of our licensing strategy. It is not a legal document. All licensing is ultimately governed by the full text of the `LICENSE` file and any formal Contributor License Agreement you may sign. We strongly recommend consulting with your own legal counsel to ensure you fully understand your rights and obligations.
+def list_all_clients(db_core: BIC_DB) -> list[dict]:
+    """Returns a list of all clients."""
+    # The find_all method conveniently returns a list of dicts.
+    return db_core.find_all("clients")
+```
+
+### For `UIAction` Handlers
+
+These functions process form submissions.
+
+- **Signature**: `def my_action_handler(db_core: BIC_DB, **kwargs):`
+- **Arguments**: The function will receive all the fields from the form as keyword arguments (`kwargs`). The names of the arguments will match the `name` you gave each `FormField` in your `UIAction` definition.
+- **Returns**: The function should return a `dict` with at least a `"success": True` or `"success": False` key. You can also include a `"message"` key for displaying errors to the user.
+
+```python
+# In bic/modules/network_management.py
+
+def add_pool(db_core: BIC_DB, name: str, cidr: str, description: str):
+    """Adds a new IP pool to the database."""
+    try:
+        net = ipaddress.ip_network(cidr)
+        # ... (logic to add the pool)
+        db_core.insert('ip_pools', {...})
+        update_bird_configs(db_core)
+        return {"success": True, "message": f"IP Pool '{name}' created."}
+    except ValueError as e:
+        return {"success": False, "message": str(e)}
+```
+
+### For `UIAction` Loaders
+
+These optional functions pre-populate forms with data (e.g., for an "Edit" screen).
+
+- **Signature**: `def my_loader_function(db_core: BIC_DB, id: int) -> dict:`
+- **Arguments**: The function typically receives the `id` of the item to load.
+- **Returns**: It **must** return a single `dict` containing the data for the item. The keys should match the `name`s of the `FormField`s in the form.
+
+```python
+# In bic/ui/clients.py (Loaders can also be defined here if they are simple)
+
+def load_client_for_edit(db_core: BIC_DB, id: int):
+    return db_core.find_one("clients", {"id": id})
+```
+
+---
+
+## Interacting with Other Modules
+
+It is common and encouraged for a module function to call functions in other modules. For example, the `provision_new_client` function in `client_management.py` is an orchestrator that calls functions in `network_management`, `wireguard_management`, `bgp_management`, and `email_notifications` to perform its complex task.
+
+This practice keeps each module focused on its specific domain while allowing you to build powerful, high-level workflows.

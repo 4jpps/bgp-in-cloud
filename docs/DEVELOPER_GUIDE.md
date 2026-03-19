@@ -1,245 +1,96 @@
-# BGP in the Cloud (BIC) - Developer Guide
+# BIC IPAM Developer Guide
 
-## Table of Contents
-1.  [Architectural Overview](#architectural-overview)
-2.  [Part 1: Creating a New Module (Backend Logic)](#part-1-creating-a-new-module-backend-logic)
-3.  [Part 2: Database Integration](#part-2-database-integration)
-4.  [Part 3: Creating a New Menu (UI Integration)](#part-3-creating-a-new-menu-ui-integration)
-5.  [Complete Example: A "Firewall Rules" Module](#complete-example-a-firewall-rules-module)
+This guide provides instructions for developers on how to extend the BIC IPAM application by adding new features, views, and actions. It is essential to follow this guide to maintain the consistency and stability of the unified architecture.
 
 ---
 
-## Architectural Overview
+## Core Philosophy: The Unified UI Schema
 
-This application is built on a **definition-driven architecture**. The core principle is that the user interface (both the TUI and the Web UI) is dynamically generated at runtime from a single, centralized data structure. This ensures consistency and makes adding new features incredibly efficient.
+The entire application—both the Web UI and the Text-based UI (TUI)—is dynamically generated from a single, declarative source of truth located in the `bic/ui/` directory. This means that to add a new feature, you do **not** write any presentation-specific code (like HTML or Textual layout code). Instead, you simply define the feature using the provided Python `dataclasses`.
 
-The central file governing this architecture is **`bic/menus/menu_structure.py`**. By adding an entry to this file, you are telling the application about your new feature. The TUI and Web UI will automatically create the necessary menus and forms based on the information you provide.
+The main building blocks, defined in `bic/ui/schema.py`, are:
 
-Your development workflow will always follow this pattern:
-1.  **Create the backend logic** in a new `bic/modules/` file.
-2.  **Define the database schema** for your new data in `bic/core.py`.
-3.  **Create the UI definition** in `bic/menus/menu_structure.py`, which includes:
-    a.  The TUI handler script.
-    b.  The Web UI handler function and form definition.
+- **`UIView`**: Represents a screen that displays a list of items in a table (e.g., List Clients).
+- **`UIAction`**: Represents a screen that performs an action, usually via a form (e.g., Add Pool, Edit Client, Swap Pool).
+- **`UIMenu`**: A container that holds a list of `UIMenuItem`s, which can be other menus, views, or actions.
+
+By defining your feature using these classes, the generic rendering engines in `webapp.py` and `bic/tui/generic_screens.py` will automatically build the correct interface for both platforms.
 
 ---
 
-## Part 1: Creating a New Module (Backend Logic)
+## How to Add a New Feature (Example: A "System Reboot" Action)
 
-All business logic must reside in the `bic/modules/` directory. These modules are the "engine" of the application and are called by both the TUI and the Web UI.
+Let's walk through adding a simple new feature: a "System Reboot" action that asks for confirmation and then runs a command.
 
-**1. Create the Module File:**
+### Step 1: Write the Backend Logic
 
-Create a new Python file in the `bic/modules/` directory. The filename should be descriptive and end in `_management.py` to maintain consistency.
+All core business logic belongs in a module within the `bic/modules/` directory. Since this is a system-level action, we'll add our logic to `bic/modules/system_management.py`.
 
-*File Location:*
-`bic/modules/new_feature_management.py`
-
-**2. Write the Boilerplate Code:**
-
-Your module should contain functions that perform specific actions. Every function that interacts with the database **must** accept `db_core: BIC_DB` as its first argument.
-
-*Example `bic/modules/new_feature_management.py`*
 ```python
-from bic.core import BIC_DB
+# In bic/modules/system_management.py
 
-# A function to add a new record
-def add_new_item(db_core: BIC_DB, item_name: str, item_description: str):
-    """Adds a new item to the database."""
+import subprocess
 
-    # ... (database logic will go here) ...
-
-    # Always return a dictionary with a success status and a message
-    return {"success": True, "message": f"Successfully added '{item_name}'."}
-
-# A function to get all items
-def get_all_items(db_core: BIC_DB):
-    """Retrieves all items from the database."""
-    items = db_core.find_all('new_items')
-    return items
+def reboot_system(db_core, confirmation: str):
+    """Reboots the system if the user confirms."""
+    if confirmation.lower() != 'yes':
+        return {"success": False, "message": "Reboot cancelled."}
+    
+    # This is a placeholder for the actual reboot command
+    # In a real scenario, you might run: subprocess.run(["sudo", "reboot"], check=True)
+    print("SYSTEM IS REBOOTING NOW...")
+    return {"success": True, "message": "System is rebooting."}
 ```
 
----
+### Step 2: Define the UI
 
-## Part 2: Database Integration
+Now, we define how this action should appear in the UI. Since it's a system action, we'll add the definition to `bic/ui/system.py`.
 
-To store data for your new module, you must define its table schema in the central database core.
+We will create a `UIAction` object. This object tells the rendering engines to build a form.
 
-**1. Edit the Core Schema Definition:**
-
-Open `bic/core.py` and locate the `SCHEMA` dictionary. This dictionary defines all tables and columns in the SQLite database.
-
-**2. Add Your New Table:**
-
-Add a new key to the `SCHEMA` dictionary. The key is the table name, and the value is a list of strings, where each string defines a column.
-
-*Example addition to `bic/core.py`*
 ```python
-SCHEMA = {
-    "clients": [
-        "id INTEGER PRIMARY KEY AUTOINCREMENT",
-        "name TEXT NOT NULL UNIQUE",
-        # ... other columns
-    ],
-    # ... other tables
-    "new_items": [
-        "id INTEGER PRIMARY KEY AUTOINCREMENT",
-        "name TEXT NOT NULL",
-        "description TEXT",
-        "created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP"
+# In bic/ui/system.py
+
+# ... (import statements)
+from bic.modules import system_management
+
+# ... (other definitions)
+
+# Define the new action
+reboot_action = UIAction(
+    name="Reboot System",
+    handler=system_management.reboot_system,
+    form_fields=[
+        FormField(name="confirmation", label="Type \'yes\' to confirm reboot", required=True)
     ]
-}
+)
 ```
 
-**3. Perform CRUD Operations:**
+### Step 3: Add the Item to the Menu
 
-The `BIC_DB` class in `core.py` provides all the necessary methods (`insert`, `find_one`, `find_all`, `update`, `delete`). You use these methods within your module's functions.
+Finally, we need to make the action accessible by adding it to a menu. We'll add a `UIMenuItem` to the `system_menu` in `bic/ui/system.py`.
 
-*Example of using CRUD in `bic/modules/new_feature_management.py`*
 ```python
-from bic.core import BIC_DB
+# In bic/ui/system.py, find the system_menu definition
 
-def add_new_item(db_core: BIC_DB, item_name: str, item_description: str):
-    item_id = db_core.insert('new_items', {
-        'name': item_name,
-        'description': item_description
-    })
-    if item_id:
-        return {"success": True, "message": f"Successfully added '{item_name}'."}
-    else:
-        return {"success": False, "message": "Failed to add item."}
+system_menu = UIMenu(
+    name="System",
+    items=[
+        UIMenuItem(name="Dashboard", path="/", item=None), # Special case
+        UIMenuItem(name="Settings", path="/system/settings", item=edit_settings),
+        # Add our new item here!
+        UIMenuItem(name="Reboot System", path="/system/reboot", item=reboot_action),
+    ]
+)
 ```
 
-**Database Migrations:** The `BIC_DB` class handles schema creation automatically. When you add a new table definition, it will be created the next time the application runs. For column additions or modifications, a manual migration script may be required in the future, but for new tables, no extra steps are needed.
+### That's It!
 
----
+With these three simple steps, you have added a new "Reboot System" feature. Because of the unified architecture:
 
-## Part 3: Creating a New Menu (UI Integration)
+- A "Reboot System" option will automatically appear in the "System" menu in **both** the Web UI and the TUI.
+- Clicking it will navigate to a new page/screen.
+- A form with a single text box (`Type 'yes' to confirm reboot`) will be dynamically generated.
+- Submitting the form will correctly call your `reboot_system` function.
 
-This is where you bring your new feature to life in the user interfaces.
-
-**1. Edit the Menu Structure:**
-
-Open `bic/menus/menu_structure.py` and add a new entry to the `MENU_STRUCTURE` dictionary.
-
-*Example addition to `bic/menus/menu_structure.py`*
-```python
-"New Feature": {
-    "type": "submenu",
-    "handler": {
-        "Add New Item": {
-            "type": "action",
-            "handler": "bic.menus.new_feature.add",  # TUI handler script
-            "web_handler": "bic.modules.new_feature_management.add_new_item", # Web UI function
-            "web_form": [
-                {"label": "Item Name", "name": "item_name", "type": "text", "required": True},
-                {"label": "Item Description", "name": "item_description", "type": "text"}
-            ]
-        }
-    }
-},
-```
-
-**2. Create the TUI Handler:**
-
-Based on the `handler` path you defined (`bic.menus.new_feature.add`), create the corresponding file.
-
-*File Location:*
-`bic/menus/new_feature/add.py`
-
-This TUI script is a thin presentation layer. Its only job is to get input from the user and call the backend module function.
-
-*Example `bic/menus/new_feature/add.py`*
-```python
-from rich.prompt import Prompt
-from rich.console import Console
-from bic.core import BIC_DB
-from bic.modules import new_feature_management
-
-def run(db_core: BIC_DB):
-    console = Console()
-    console.print("\n[bold underline]Add New Item[/bold underline]")
-
-    item_name = Prompt.ask("Enter the item name")
-    item_description = Prompt.ask("Enter the item description")
-
-    result = new_feature_management.add_new_item(db_core, item_name, item_description)
-
-    if result["success"]:
-        console.print(f"\n[green]{result['message']}[/green]")
-    else:
-        console.print(f"\n[red]Error: {result['message']}[/red]")
-```
-
-**3. Web UI Integration (Automatic):**
-
-**No further steps are needed for the Web UI.** The `webapp.py` server will automatically:
-1.  Read the `web_handler` path and know which function to call.
-2.  Read the `web_form` definition and use the `generic_action.html` template to render a complete HTML form for you.
-
----
-
-## Complete Example: A "Firewall Rules" Module
-
-Let's add a simple module to manage custom firewall rules.
-
-**1. Database Schema (`bic/core.py`):**
-```python
-"firewall_rules": [
-    "id INTEGER PRIMARY KEY AUTOINCREMENT",
-    "protocol TEXT NOT NULL",
-    "port INTEGER NOT NULL",
-    "action TEXT NOT NULL DEFAULT 'ACCEPT'"
-]
-```
-
-**2. Backend Module (`bic/modules/custom_firewall_management.py`):**
-```python
-from bic.core import BIC_DB
-
-def add_firewall_rule(db_core: BIC_DB, protocol: str, port: int, action: str):
-    db_core.insert('firewall_rules', {'protocol': protocol, 'port': port, 'action': action})
-    # In a real scenario, you would also call a function to apply this rule to iptables
-    return {"success": True, "message": f"Rule for {protocol}/{port} added."}
-```
-
-**3. Menu Definition (`bic/menus/menu_structure.py`):**
-```python
-"System Settings": {
-    "type": "submenu",
-    "handler": {
-        // ... existing settings ...
-        "Add Firewall Rule": {
-            "type": "action",
-            "handler": "bic.menus.system.add_firewall_rule",
-            "web_handler": "bic.modules.custom_firewall_management.add_firewall_rule",
-            "web_form": [
-                {"label": "Protocol", "name": "protocol", "type": "select", "options": ["TCP", "UDP"]},
-                {"label": "Port Number", "name": "port", "type": "number", "required": True},
-                {"label": "Action", "name": "action", "type": "select", "options": ["ACCEPT", "DROP"]}
-            ]
-        }
-    }
-},
-```
-
-**4. TUI Handler (`bic/menus/system/add_firewall_rule.py`):**
-```python
-from rich.prompt import Prompt
-from rich.console import Console
-from bic.core import BIC_DB
-from bic.modules import custom_firewall_management
-
-def run(db_core: BIC_DB):
-    console = Console()
-    console.print("\n[bold underline]Add Custom Firewall Rule[/bold underline]")
-
-    protocol = Prompt.ask("Protocol", choices=["TCP", "UDP"], default="TCP")
-    port = int(Prompt.ask("Port Number"))
-    action = Prompt.ask("Action", choices=["ACCEPT", "DROP"], default="ACCEPT")
-
-    result = custom_firewall_management.add_firewall_rule(db_core, protocol, port, action)
-    console.print(f"\n[green]{result['message']}[/green]")
-```
-
-By following these four steps, you have successfully extended the application with a new feature that is fully integrated into the database and available in both the TUI and the Web UI, all while strictly adhering to the project's architecture.
+This process applies to all new features. By separating the core logic (`modules`) from the UI definition (`ui`), the system remains clean, consistent, and easy to extend.

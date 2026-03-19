@@ -25,19 +25,20 @@ class UIAction:
     form_fields: List[FormField] = field(default_factory=list)
 
 @dataclass
-class UIView:
-    name: str
-    handler: Callable
-    tui_screen: Type[Screen] = None
-    columns: List[Dict[str, str]] = field(default_factory=list) # e.g. [{'key': 'name', 'label': 'Client Name'}]
-    actions: List[UIAction] = field(default_factory=list)
-
-@dataclass
 class UIMenuItem:
     name: str
     path: str # e.g. "/clients/list"
     description: str = ""
     item: Any = None # Can be a UIAction, UIView, or another UIMenu
+    hidden: bool = False
+
+@dataclass
+class UIView:
+    name: str
+    handler: Callable
+    tui_screen: Type[Screen] = None
+    columns: List[Dict[str, str]] = field(default_factory=list)
+    actions: List[UIMenuItem] = field(default_factory=list)
 
 @dataclass
 class UIMenu:

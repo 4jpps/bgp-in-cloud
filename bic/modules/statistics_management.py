@@ -54,7 +54,7 @@ def gather_all_statistics(db_core: BIC_DB) -> dict:
         stats['cpu_load'] = psutil.cpu_percent(interval=0.5)
         stats['mem_percent'] = psutil.virtual_memory().percent
         disk_usage = shutil.disk_usage("/")
-        stats['disk_percent'] = disk_usage.percent
+        stats['disk_percent'] = (disk_usage.used / disk_usage.total) * 100
     except Exception as e:
         print(f"Could not get system stats: {e}", file=sys.stderr)
         stats.update({'cpu_load': 'N/A', 'mem_percent': 'N/A', 'disk_percent': 'N/A'})

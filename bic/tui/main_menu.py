@@ -11,6 +11,8 @@ from bic.core import BIC_DB
 from bic.menus.menu_structure import MENU_STRUCTURE
 from bic.modules import system_management, statistics_management
 from bic.__version__ import __version__
+# Import the new screens
+from bic.menus.network.pools.edit import PoolSelectScreen
 
 MENU_STACK = [MENU_STRUCTURE]
 PATH_TITLES = ["Main Menu"]
@@ -57,7 +59,6 @@ class Menu(Static):
         self.remove_children()
         buttons = []
         for item in current_menu_level.keys():
-            # Sanitize the menu item label to create a valid ID
             sanitized_id = item.replace(" ", "_").lower()
             buttons.append(Button(item, id=sanitized_id, variant="success"))
         self.mount_all(buttons)
@@ -98,8 +99,6 @@ class TuiApp(App):
             return
 
         current_menu_level = MENU_STACK[-1]
-        
-        # Find the original menu item label from the sanitized button_id
         original_item_label = ""
         for key in current_menu_level.keys():
             if key.replace(" ", "_").lower() == button_id:
@@ -113,11 +112,15 @@ class TuiApp(App):
                 MENU_STACK.append(selected_item['handler'])
                 PATH_TITLES.append(original_item_label)
                 self.update_menu_view()
+            # MODIFIED: Handle special case for modal screens
+            elif selected_item['handler'] == 'bic.menus.network.pools.edit':
+                self.push_screen(PoolSelectScreen(self.db_core))
             elif selected_item['type'] == 'action':
                 with self.suspend():
-                    run_action(self.db_core, selected_item['handler'])
+                    run_legacy_action(self.db_core, selected_item['handler'])
 
-def run_action(db_core: BIC_DB, handler_path: str):
+def run_legacy_action(db_core: BIC_DB, handler_path: str):
+    """Runs a legacy action script that uses rich.prompt."""
     from rich.console import Console
     from rich.prompt import Prompt
     console = Console()
@@ -132,6 +135,7 @@ def run_action(db_core: BIC_DB, handler_path: str):
         Prompt.ask("\nPress Enter to continue...")
 
 def run(db_core: BIC_DB):
+    """Main entry point to run the Textual TUI app."""
     system_management.setup_host_networking(db_core)
     app = TuiApp(db_core)
     app.run()

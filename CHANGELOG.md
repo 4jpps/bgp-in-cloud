@@ -6,6 +6,11 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0539] - 2026-03-19
+
+### Fixed
+- **Critical TUI Crash:** Corrected a `RuntimeError` that occurred when trying to open the "Edit Pool" screen. The feature now correctly uses a modal screen within the main application event loop.
+
 ## [2026.03.19.0536] - 2026-03-19
 
 ### Changed

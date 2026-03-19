@@ -5,7 +5,7 @@
 {% block content %}
 <h1 class="text-2xl font-bold mb-6">System Statistics</h1>
 
-<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
     <!-- System Stats -->
     <div class="card">
         <h2 class="text-xl font-semibold mb-4">System Status</h2>
@@ -21,7 +21,7 @@
                 </tr>
                 <tr>
                     <td class="py-2">Disk Usage</td>
-                    <td>{{ stats.disk_percent }}%</td>
+                    <td>{{ "%.2f"|format(stats.disk_percent) }}%</td>
                 </tr>
             </tbody>
         </table>
@@ -44,4 +44,38 @@
         </table>
     </div>
 </div>
+
+<!-- IP Pool Details -->
+<div class="card">
+    <h2 class="text-xl font-semibold mb-4">IP Pool Availability</h2>
+    <div class="overflow-x-auto">
+        <table class="w-full text-left">
+            <thead>
+                <tr class="bg-gray-200 dark:bg-gray-700">
+                    <th class="p-3">Pool Name</th>
+                    <th class="p-3">Usage</th>
+                    <th class="p-3">Available IPs</th>
+                    <th class="p-3">Available Subnets</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pool in stats.pool_details %}
+                <tr class="border-b border-gray-200 dark:border-gray-700">
+                    <td class="p-3">{{ pool.name }}</td>
+                    <td class="p-3">{{ "%.2f"|format(pool.usage) }}%</td>
+                    <td class="p-3">{{ pool.available_single_ips }}</td>
+                    <td class="p-3">
+                        {% for prefix, count in pool.available_subnets.items() %}
+                            <span>{{ count }}x {{ prefix }}</span><br>
+                        {% else %}
+                            N/A
+                        {% endfor %}
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
+
 {% endblock %}

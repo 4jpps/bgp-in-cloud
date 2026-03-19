@@ -92,3 +92,21 @@ th, td {
     padding: 8px;
     text-align: left;
 }
+
+/* Action Button Styles */
+.action-button {
+    background-color: #21262d;
+    color: #c9d1d9;
+    padding: 5px 10px;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    margin-right: 5px;
+    border-radius: 5px;
+}
+
+.action-button:hover {
+    background-color: #30363d;
+}

@@ -25,10 +25,9 @@
                 {% if view.actions %}
                     <td>
                         {% for action_item in view.actions %}
-                            <a href="{{ url_for('render_page', path=action_item.path.lstrip('/')) }}?id={{ item.id }}" class="text-blue-600 hover:underline dark:text-blue-400">
+                            <a href="{{ url_for('render_page', path=action_item.path.lstrip('/')) }}?id={{ item.id }}" class="action-button">
                                 {{ action_item.name }}
                             </a>
-                            {% if not loop.last %}<span class="mx-2">|</span>{% endif %}
                         {% endfor %}
                     </td>
                 {% endif %}

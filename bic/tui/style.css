@@ -13,7 +13,7 @@ Screen {
 }
 
 #menu-title {
-    content-align: center;
+    text-align: center;
     width: 100%;
     margin-bottom: 1;
 }
@@ -33,8 +33,8 @@ Button {
 
 #copyright {
     width: 100%;
-    content-align: center;
-    color: $text-muted;
+    text-align: center;
+    color: gray;
 }
 
 /* Generic List Screen */

@@ -1,6 +1,10 @@
-from bic.ui.schema import UIMenu, UIMenuItem, UIView, UIAction, FormField
+from bic.ui.schema import UIMenu, UIMenuItem, UIView, UIAction, FormField, FormSelectOption
 from bic.modules import network_management
 from bic.core import BIC_DB
+
+def get_ip_pool_options(db_core: BIC_DB):
+    pools = db_core.find_all("ip_pools")
+    return [FormSelectOption(label=p['name'], value=p['id']) for p in pools]
 
 # Loader function for the edit form
 def load_pool_for_edit(db_core: BIC_DB, id: int):
@@ -82,13 +86,7 @@ find_free_ip_action = UIAction(
     name="Find Free IP",
     handler=network_management.find_free_ip_for_web,
     form_fields=[
-        FormField(
-            name="pool_id", 
-            label="IP Pool", 
-            type="select", 
-            db_source_table="ip_pools", 
-            db_source_display_key="name"
-        ),
+        FormField(name="pool_id", label="IP Pool", type="select", options_loader=get_ip_pool_options, required=True),
     ]
 )
 

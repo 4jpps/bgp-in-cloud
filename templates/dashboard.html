@@ -1,86 +1,89 @@
 {% extends "base.html" %}
 
-{% block title %}BIC IPAM Dashboard{% endblock %}
-
 {% block content %}
-    <h1>Dashboard</h1>
-    <h2>System Statistics</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Metric</th>
-                <th>Value</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>CPU Load</td>
-                <td>{{ stats.system.cpu_load }}% / {{ stats.system.cpu_cores }}c</td>
-            </tr>
-            <tr>
-                <td>Memory</td>
-                <td>{{ stats.system.mem_percent }}% used</td>
-            </tr>
-            <tr>
-                <td>Disk</td>
-                <td>{{ stats.system.disk_percent }}% used</td>
-            </tr>
-            <tr>
-                <td>WAN Out</td>
-                <td>{{ stats.network.wan.bytes_sent }}</td>
-            </tr>
-            <tr>
-                <td>WAN In</td>
-                <td>{{ stats.network.wan.bytes_recv }}</td>
-            </tr>
-        </tbody>
-    </table>
-    
-    <h2>Database Statistics</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>Metric</th>
-                <th>Value</th>
-            </tr>
-        </thead>
-        <tbody>
-            <tr>
-                <td>Clients</td>
-                <td>{{ stats.total_clients }}</td>
-            </tr>
-            <tr>
-                <td>IP Pools</td>
-                <td>{{ stats.total_pools }}</td>
-            </tr>
-            <tr>
-                <td>IP Allocations</td>
-                <td>{{ stats.total_allocations }}</td>
-            </tr>
-            <tr>
-                <td>Subnets</td>
-                <td>{{ stats.total_subnets }}</td>
-            </tr>
-        </tbody>
-    </table>
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+    <!-- System Stats -->
+    <div class="card">
+        <h2 class="text-xl font-semibold mb-4">System Status</h2>
+        <table class="w-full text-left">
+            <tbody>
+                <tr>
+                    <td class="py-2">CPU Load</td>
+                    <td>{{ stats.cpu_load }}%</td>
+                </tr>
+                <tr>
+                    <td class="py-2">Memory Usage</td>
+                    <td>{{ stats.mem_percent }}%</td>
+                </tr>
+                <tr>
+                    <td class="py-2">Disk Usage</td>
+                    <td>{{ stats.disk_percent }}%</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
 
-    <h2>Clients</h2>
-    <table>
-        <thead>
-            <tr>
-                <th>ID</th>
-                <th>Name</th>
-                <th>Email</th>
-            </tr>
-        </thead>
-        <tbody>
-            {% for client in clients %}
-            <tr>
-                <td>{{ client.id }}</td>
-                <td><a href="/client/{{ client.id }}">{{ client.name }}</a></td>
-                <td>{{ client.email }}</td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
+    <!-- Network Stats -->
+    <div class="card">
+        <h2 class="text-xl font-semibold mb-4">Network Traffic</h2>
+        <table class="w-full text-left">
+            <tbody>
+                <tr>
+                    <td class="py-2">Bytes Sent</td>
+                    <td>{{ stats.bytes_sent }}</td>
+                </tr>
+                <tr>
+                    <td class="py-2">Bytes Received</td>
+                    <td>{{ stats.bytes_recv }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Database Stats -->
+    <div class="card">
+        <h2 class="text-xl font-semibold mb-4">Database Overview</h2>
+        <table class="w-full text-left">
+            <tbody>
+                <tr>
+                    <td>Clients</td>
+                    <td>{{ stats.total_clients }}</td>
+                </tr>
+                <tr>
+                    <td>IP Pools</td>
+                    <td>{{ stats.total_pools }}</td>
+                </tr>
+                <tr>
+                    <td>IP Allocations</td>
+                    <td>{{ stats.total_allocations }}</td>
+                </tr>
+                <tr>
+                    <td>Subnets</td>
+                    <td>{{ stats.total_subnets }}</td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Pool Usage -->
+    <div class="card">
+        <h2 class="text-xl font-semibold mb-4">IP Pool Usage</h2>
+        <table class="w-full text-left">
+            <thead>
+                <tr>
+                    <th class="py-2">Pool Name</th>
+                    <th class="py-2">Usage</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for pool in stats.pool_stats %}
+                <tr>
+                    <td>{{ pool.name }}</td>
+                    <td>{{ "%.2f"|format(pool.usage) }}%</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</div>
 {% endblock %}

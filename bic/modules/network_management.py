@@ -208,6 +208,16 @@ def list_all_allocations_joined(db_core: BIC_DB):
     rows = db_core.conn.execute(query).fetchall()
     return [dict(row) for row in rows]
 
+def deallocate_and_remove(db_core: BIC_DB, assignment_type: str, assignment_id: int):
+    """Deallocates an IP or subnet and removes it from the database."""
+    if assignment_type == 'ip':
+        db_core.delete('ip_allocations', assignment_id)
+        return {"success": True, "message": "IP allocation removed."}
+    elif assignment_type == 'subnet':
+        db_core.delete('ip_subnets', assignment_id)
+        return {"success": True, "message": "Subnet allocation removed."}
+    return {"success": False, "message": "Invalid assignment type."}
+
 def find_free_ip_for_web(db_core: BIC_DB, pool_id: int):
     """Web UI wrapper to find the next available IP and return a result."""
     ip = get_next_available_ip_in_pool(db_core, int(pool_id))

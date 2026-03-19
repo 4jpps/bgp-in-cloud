@@ -153,6 +153,12 @@ async def handle_provision_client(request: Request, db: BIC_DB = Depends(get_db)
     )
     return RedirectResponse(url="/page/clients/list", status_code=303)
 
+@app.get("/remove-assignment/{assignment_type}/{assignment_id}")
+async def remove_assignment(assignment_type: str, assignment_id: int, client_id: int, db: BIC_DB = Depends(get_db)):
+    from bic.modules import network_management
+    network_management.deallocate_and_remove(db, assignment_type, assignment_id)
+    return RedirectResponse(url=f"/page/clients/edit?id={client_id}", status_code=303)
+
 @app.get("/system/statistics", response_class=HTMLResponse)
 async def system_stats_page(request: Request, db: BIC_DB = Depends(get_db)):
     settings = system_management.get_all_settings(db)

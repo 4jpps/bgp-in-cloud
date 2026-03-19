@@ -110,3 +110,20 @@ th, td {
 .action-button:hover {
     background-color: #30363d;
 }
+
+.action-button-red {
+    background-color: #da3633;
+    color: #f0f6fc;
+    padding: 5px 10px;
+    font-size: 14px;
+    border: none;
+    cursor: pointer;
+    text-decoration: none;
+    display: inline-block;
+    margin-right: 5px;
+    border-radius: 5px;
+}
+
+.action-button-red:hover {
+    background-color: #b22d2a;
+}

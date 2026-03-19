@@ -27,4 +27,27 @@
         {% endfor %}
         <button type="submit">Submit</button>
     </form>
+
+    {% if data.ip_allocations or data.ip_subnets %}
+    <div class="mt-8">
+        <h2 class="text-xl font-semibold mb-4">Current Assignments</h2>
+        <div class="card">
+            <ul>
+                {% for alloc in data.ip_allocations %}
+                <li class="flex justify-between items-center py-2 border-b">
+                    <span>IP: {{ alloc.ip_address }} ({{ alloc.description }})</span>
+                    <a href="/remove-assignment/ip/{{ alloc.id }}?client_id={{ data.id }}" class="action-button-red">Remove</a>
+                </li>
+                {% endfor %}
+                {% for subnet in data.ip_subnets %}
+                <li class="flex justify-between items-center py-2 border-b">
+                    <span>Subnet: {{ subnet.subnet }} ({{ subnet.description }})</span>
+                    <a href="/remove-assignment/subnet/{{ subnet.id }}?client_id={{ data.id }}" class="action-button-red">Remove</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+    </div>
+    {% endif %}
+
 {% endblock %}

@@ -4,7 +4,11 @@ from bic.core import BIC_DB
 
 # Loader function for the edit form
 def load_client_for_edit(db_core: BIC_DB, id: int):
-    return db_core.find_one("clients", {"id": id})
+    client = db_core.find_one("clients", {"id": id})
+    if client:
+        client['ip_allocations'] = db_core.find_all_by('ip_allocations', {'client_id': id})
+        client['ip_subnets'] = db_core.find_all_by('ip_subnets', {'client_id': id})
+    return client
 
 # Define Actions
 edit_client_action = UIAction(

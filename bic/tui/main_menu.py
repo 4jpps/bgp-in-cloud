@@ -9,46 +9,42 @@ from textual.widgets import Button, Header, Static
 from bic.core import BIC_DB
 from bic.modules import statistics_management
 from bic.ui import main_menu as menu_structure
-from bic.ui.schema import UIMenu, UIMenuItem, UIAction, UIView
+from bic.ui.schema import UIMenu, UIAction, UIView
 from bic.tui.generic_screens import GenericListScreen, GenericFormScreen
 from bic.tui.provision_client_screen import ProvisionClientScreen
 from bic.__version__ import __version__
 
-# --- Helper function to sanitize paths for widget IDs ---
-def sanitize_for_id(path: str) -> str:
-    """Replaces invalid characters in a path to make it a valid CSS ID."""
-    return path.replace('/', '_').replace('.', '_')
 
 class MainMenuScreen(Screen):
     """The main menu screen for the TUI."""
 
-    def __init__(self, db_core: BIC_DB, *args, **kwargs):
+    def __init__(self, db_core: BIC_DB, menu_data: UIMenu = menu_structure, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.db_core = db_core
-        self.menu_stack = [menu_structure]
-
-    @property
-    def current_menu(self):
-        return self.menu_stack[-1]
+        self.menu_data = menu_data
 
     def compose(self) -> ComposeResult:
         year = datetime.date.today().year
         yield Header(show_clock=True)
         with Horizontal(id="main-container"):
             with Vertical(id="main-menu-container"):
-                yield Static(self.current_menu.name, id="menu-title")
+                yield Static(self.menu_data.name, id="menu-title")
                 with Vertical(id="menu-container"):
-                    for item in self.current_menu.items:
-                        yield Button(item.name, id=sanitize_for_id(item.path))
-                yield Button("Back", id="back-button", variant="default", disabled=True)
-            with Vertical(id="stats-pane"):
-                yield Static("📊 Statistics", classes="title")
-                yield Static(id="stats-display")
+                    for item in self.menu_data.items:
+                        if not item.hidden:
+                            yield Button(item.name, id=item.path)
+            # Only show stats pane on the root menu
+            if self.menu_data.name == "Main Menu":
+                with Vertical(id="stats-pane"):
+                    yield Static("📊 Statistics", classes="title")
+                    yield Static(id="stats-display")
         yield Static(f"Copyright {year} Jeff Parrish PC Services - v{__version__}", id="copyright")
 
     def on_mount(self) -> None:
-        self.update_stats()
-        self.set_interval(30, self.update_stats)
+        # Only manage stats on the main menu
+        if self.menu_data.name == "Main Menu":
+            self.update_stats()
+            self.set_interval(30, self.update_stats)
 
     def update_stats(self) -> None:
         stats = statistics_management.gather_all_statistics(self.db_core)
@@ -65,42 +61,27 @@ class MainMenuScreen(Screen):
         self.query_one("#stats-display").update(stats_text)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
-        if event.button.id == "back-button":
-            if len(self.menu_stack) > 1:
-                self.menu_stack.pop()
-                self.rebuild_menu()
-            return
-
         selected_menu_item = None
-        sanitized_id = event.button.id
-        for item in self.current_menu.items:
-            if sanitize_for_id(item.path) == sanitized_id:
+        for item in self.menu_data.items:
+            if item.path == event.button.id:
                 selected_menu_item = item
                 break
         
         if selected_menu_item:
-            if isinstance(selected_menu_item.item, UIMenu):
-                self.menu_stack.append(selected_menu_item.item)
-                self.rebuild_menu()
+            item_action = selected_menu_item.item
+            if isinstance(item_action, UIMenu):
+                self.app.push_screen(MainMenuScreen(self.db_core, menu_data=item_action))
             elif selected_menu_item.path == "/clients/provision/new":
                 self.app.push_screen(ProvisionClientScreen(self.db_core))
-            elif isinstance(selected_menu_item.item, UIAction):
-                self.app.push_screen(GenericFormScreen(self.db_core, selected_menu_item.item))
-            elif isinstance(selected_menu_item.item, UIView):
-                self.app.push_screen(GenericListScreen(self.db_core, selected_menu_item.item))
-
-    def rebuild_menu(self):
-        menu_container = self.query_one("#menu-container")
-        menu_container.remove_children()
-        for item in self.current_menu.items:
-            menu_container.mount(Button(item.name, id=sanitize_for_id(item.path)))
-        self.query_one("#menu-title").update(self.current_menu.name)
-        self.query_one("#back-button").disabled = len(self.menu_stack) <= 1
+            elif isinstance(item_action, UIAction):
+                self.app.push_screen(GenericFormScreen(self.db_core, item_action))
+            elif isinstance(item_action, UIView):
+                self.app.push_screen(GenericListScreen(self.db_core, item_action))
 
 class BIC_TUI(App):
     """The main Textual application."""
 
-    CSS_PATH = "style.css"
+    CSS_PATH = "main_menu.css"
 
     def __init__(self, db_core: BIC_DB, *args, **kwargs):
         super().__init__(*args, **kwargs)

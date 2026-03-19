@@ -13,10 +13,22 @@
         <div class="nav-links">
             {% for item in menu.items %}
                 {% if not item.hidden %}
-                <a href="{{ url_for('render_page', path=item.path.lstrip('/')) if item.path != '/' else '/' }}" 
-                   class="nav-button-link {% if request.url.path == item.path %}active{% endif %}">
-                    {{ item.name }}
-                </a>
+                    {% if item.item and item.item.items %}
+                        <div class="nav-dropdown">
+                            <button class="nav-button">{{ item.name }}</button>
+                            <div class="dropdown-content">
+                                {% for sub_item in item.item.items %}
+                                    {% if not sub_item.hidden %}
+                                    <a href="{{ url_for('render_page', path=sub_item.path.lstrip('/')) }}">{{ sub_item.name }}</a>
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% elif item.path %}
+                        <a href="{{ url_for('render_page', path=item.path.lstrip('/')) if item.path != '/' else '/' }}" class="nav-button-link">
+                            {{ item.name }}
+                        </a>
+                    {% endif %}
                 {% endif %}
             {% endfor %}
         </div>

@@ -17,14 +17,13 @@ def run(db_core: BIC_DB):
     console = Console()
     # Navigation stack to keep track of the path through the menu
     menu_stack = [MENU_STRUCTURE]
+    path_titles = ["Main Menu"]
 
     while menu_stack:
         current_menu_level = menu_stack[-1]
         console.clear()
         
         # Dynamically create a title based on navigation path
-        path_titles = [item['title'] for item in menu_stack[1:]]
-        path_titles.insert(0, 'Main Menu')
         title = " -> ".join(path_titles)
 
         console.print(Panel(f"[bold cyan]{title} - v{__version__}[/bold cyan]", expand=False, border_style="green"))
@@ -47,12 +46,14 @@ def run(db_core: BIC_DB):
             break
         elif chosen_item == "Back":
             menu_stack.pop()
+            path_titles.pop()
             continue
         
         selected_item = current_menu_level[chosen_item]
         
         if selected_item['type'] == 'submenu':
             menu_stack.append(selected_item['handler'])
+            path_titles.append(chosen_item)
         elif selected_item['type'] == 'action':
             try:
                 module_path = selected_item['handler']

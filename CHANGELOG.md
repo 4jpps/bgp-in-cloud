@@ -6,6 +6,17 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0616] - 2026-03-19
+
+### Fixed
+- **Robust Statistics:** Refactored the entire `statistics_management` module to prevent a single metric failure from cascading and causing other stats to fail.
+- **Disk Stat:** The disk usage statistic is now correctly and robustly gathered on Debian systems.
+- **Legacy Crash:** Fixed a recurring `KeyError: 'wan_interface'` crash on the legacy "System Dashboard" screen.
+- **TUI Footer:** Corrected the layout order of footer widgets to ensure the copyright and version information is always visible.
+
+### Changed
+- **UX:** Removed the jarring "Press Enter to return..." prompt after successfully running a legacy module.
+
 ## [2026.03.19.0611] - 2026-03-19
 
 ### Fixed

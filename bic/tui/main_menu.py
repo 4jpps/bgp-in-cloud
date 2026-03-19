@@ -76,9 +76,8 @@ class TuiApp(App):
                 yield Menu()
                 yield Button("Back", id="back-button", variant="default", disabled=True)
             yield StatsTable(self.db_core, id="stats-pane")
-        yield Footer()
-        year = datetime.now().year
         yield Static(f"Copyright {year} Jeff Parrish PC Services - v{__version__}", id="version-footer")
+        yield Footer()
 
     def update_menu_view(self) -> None:
         menu_title = " -> ".join(PATH_TITLES)
@@ -120,7 +119,6 @@ def run_legacy_action(db_core: BIC_DB, handler_path: str):
         action_module = importlib.import_module(handler_path)
         console.clear()
         action_module.run(db_core)
-        Prompt.ask("\nPress Enter to return...")
     except Exception as e:
         console.print(f"[bold red]An unexpected error occurred:[/bold red] {e}")
         console.print_exception(show_locals=True)

@@ -2,6 +2,7 @@ import psutil
 import shutil
 import subprocess
 import os
+import sys
 from bic.core import BIC_DB
 
 def _get_wan_interface():
@@ -22,44 +23,55 @@ def gather_all_statistics(db_core: BIC_DB) -> dict:
         'wan_interface': 'N/A'
     }
 
-    # System Stats
+    # --- System Stats (collected individually for robustness) ---
     try:
         stats['system']['cpu_load'] = psutil.cpu_percent(interval=0.5)
-        stats['system']['cpu_cores'] = psutil.cpu_count(logical=False)
-        stats['system']['mem_percent'] = psutil.virtual_memory().percent
-        try:
-            stats['system']['disk_percent'] = shutil.disk_usage("/").percent
-        except (FileNotFoundError, PermissionError):
-            # Fallback for environments where root isn't accessible or doesn't exist (e.g., some containers)
-            try:
-                df_output = subprocess.check_output(['df', '/'], text=True)
-                usage_percent = df_output.splitlines()[1].split()[-2].replace('%', '')
-                stats['system']['disk_percent'] = float(usage_percent)
-            except (subprocess.CalledProcessError, IndexError, ValueError):
-                stats['system']['disk_percent'] = 'N/A'
-    except Exception:
-        pass # Defaults will be used
+    except Exception as e:
+        print(f"Could not get CPU load: {e}", file=sys.stderr)
 
-    # Network Stats
     try:
-        wan_interface = _get_wan_interface()
-        stats['wan_interface'] = wan_interface or 'N/A'
-        if wan_interface and os.path.exists(f"/sys/class/net/{wan_interface}"):
-            net_io = psutil.net_io_counters(pernic=True).get(wan_interface)
-            if net_io:
-                stats['network']['wan']['bytes_sent'] = f"{net_io.bytes_sent / 1e9:.2f} GB"
-                stats['network']['wan']['bytes_recv'] = f"{net_io.bytes_recv / 1e9:.2f} GB"
-    except Exception:
-        pass # Defaults will be used
+        stats['system']['cpu_cores'] = psutil.cpu_count(logical=False)
+    except Exception as e:
+        print(f"Could not get CPU cores: {e}", file=sys.stderr)
 
-    # Database Stats
+    try:
+        stats['system']['mem_percent'] = psutil.virtual_memory().percent
+    except Exception as e:
+        print(f"Could not get memory usage: {e}", file=sys.stderr)
+
+    try:
+        # This is for the user's Debian server, so we check '/'
+        stats['system']['disk_percent'] = shutil.disk_usage('/').percent
+    except Exception as e:
+        print(f"Could not get disk usage from '/': {e}", file=sys.stderr)
+        # Fallback for other environments (like Windows dev)
+        try:
+            stats['system']['disk_percent'] = shutil.disk_usage(os.getcwd()).percent
+        except Exception as e2:
+            print(f"Could not get disk usage from getcwd(): {e2}", file=sys.stderr)
+
+    # --- Network Stats ---
+    wan_interface = _get_wan_interface()
+    stats['wan_interface'] = wan_interface or 'N/A'
+    if wan_interface:
+        try:
+            # Check for existence is mainly for Linux systems
+            if os.path.exists(f"/sys/class/net/{wan_interface}"):
+                net_io = psutil.net_io_counters(pernic=True).get(wan_interface)
+                if net_io:
+                    stats['network']['wan']['bytes_sent'] = f"{net_io.bytes_sent / 1e9:.2f} GB"
+                    stats['network']['wan']['bytes_recv'] = f"{net_io.bytes_recv / 1e9:.2f} GB"
+        except Exception as e:
+            print(f"Could not get network stats for {wan_interface}: {e}", file=sys.stderr)
+
+    # --- Database Stats ---
     try:
         conn = db_core.get_connection()
         stats['database']['clients'] = conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
         stats['database']['ip_pools'] = conn.execute("SELECT COUNT(*) FROM ip_pools").fetchone()[0]
         stats['database']['ip_allocations'] = conn.execute("SELECT COUNT(*) FROM ip_allocations").fetchone()[0]
         stats['database']['ip_subnets'] = conn.execute("SELECT COUNT(*) FROM ip_subnets").fetchone()[0]
-    except Exception:
-        pass # Defaults will be used
+    except Exception as e:
+        print(f"Could not get database stats: {e}", file=sys.stderr)
 
     return stats

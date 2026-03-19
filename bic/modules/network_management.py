@@ -173,9 +173,14 @@ def find_and_allocate_subnet_from_form(db_core: BIC_DB, pool_id: int, prefix_len
 
 def get_next_available_ip_from_form(db_core: BIC_DB, pool_id: int, client_id: int = None):
     """Wrapper for UI form to get the next available IP."""
-    ip, alloc_id = get_next_available_ip_in_pool(db_core, int(pool_id))
+    ip = get_next_available_ip_in_pool(db_core, int(pool_id))
     if ip and client_id:
-        db_core.update('ip_allocations', alloc_id, {'client_id': int(client_id)})
+        db_core.insert('ip_allocations', {
+            'pool_id': int(pool_id),
+            'client_id': int(client_id),
+            'ip_address': ip,
+            'description': f'Static IP for client #{client_id}'
+        })
     return {"success": bool(ip), "message": f"Allocated {ip}" if ip else "Failed to allocate IP."}
 
 def edit_pool_from_form(db_core: BIC_DB, id: int, name: str, cidr: str, description: str):
@@ -205,8 +210,6 @@ def list_all_allocations_joined(db_core: BIC_DB):
 
 def find_free_ip_for_web(db_core: BIC_DB, pool_id: int):
     """Web UI wrapper to find the next available IP and return a result."""
-    ip, alloc_id = get_next_available_ip_in_pool(db_core, int(pool_id))
-    # Note: This does not assign it to a client, just reserves it.
-    return {"success": bool(ip), "message": f"Reserved IP: {ip}" if ip else "No free IPs available."}
-
+    ip = get_next_available_ip_in_pool(db_core, int(pool_id))
+    return {"success": bool(ip), "message": f"Found free IP: {ip}" if ip else "No free IPs available."}
 # --- Allocation logic and other functions omitted for brevity --- 

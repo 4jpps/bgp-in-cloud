@@ -31,3 +31,4 @@ All notable changes to this project will be documented in this file.
 - TUI button focus to enable keyboard navigation.
 - BGP sessions list error handling for missing database table.
 - Browser translation prompts by adding notranslate meta tag.
+- Client provisioning 404 error by fixing menu link to use special route.

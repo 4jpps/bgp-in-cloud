@@ -47,7 +47,7 @@ class MainMenuScreen(Screen):
 
     def on_mount(self) -> None:
         # Show back button if not the root menu
-        self.bindings["b"].show = not self.is_root
+        self.get_binding("b").show = not self.is_root
         
         if self.is_root:
             self.update_stats()

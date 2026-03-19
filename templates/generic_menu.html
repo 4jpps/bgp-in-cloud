@@ -8,7 +8,7 @@
     <ul>
         {% for item in menu.items %}
             {% if not item.hidden %}
-                <li><a href="{% if item.path == '/clients/provision/new' %}/clients/provision/new{% else %}/page{{ item.path }}{% endif %}">{{ item.name }}</a></li>
+                <li><a href="{% if item.path == '/clients/provision/new' %}/clients/provision/new{% elif item.path == '/system/statistics' %}/system/statistics{% else %}/page{{ item.path }}{% endif %}">{{ item.name }}</a></li>
             {% endif %}
         {% endfor %}
     </ul>

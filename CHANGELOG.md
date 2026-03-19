@@ -6,6 +6,11 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0541] - 2026-03-19
+
+### Fixed
+- **Critical TUI Crash:** Corrected an `AttributeError` that occurred when opening the "Edit Pool" screen by using the correct `find_by_id` database method.
+
 ## [2026.03.19.0539] - 2026-03-19
 
 ### Fixed

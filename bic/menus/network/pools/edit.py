@@ -40,7 +40,7 @@ class EditDescriptionScreen(Screen):
         super().__init__(*args, **kwargs)
         self.db_core = db_core
         self.pool_id = pool_id
-        self.pool = self.db_core.find('ip_pools', self.pool_id)
+        self.pool = self.db_core.find_by_id('ip_pools', self.pool_id)
 
     def compose(self) -> ComposeResult:
         yield Header(show_clock=True)

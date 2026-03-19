@@ -115,6 +115,17 @@ MENU_STRUCTURE = {
         "type": "action",
         "handler": "bic.menus.system.statistics"
     },
+    "File Integrity Check": {
+        "type": "action",
+        "handler": "bic.menus.system.file_integrity",
+        "nav_path": "/system/file-integrity",
+        "web_handler": "bic.menus.system.file_integrity.run_check" # Example
+    },
+    "Manage BGP Sessions": {
+        "type": "action",
+        "handler": "bic.menus.system.bgp_sessions",
+        "nav_path": "/system/bgp-sessions"
+    },
     "System Settings": {
         "type": "submenu",
         "nav_path": "/action/system-settings/email-settings",

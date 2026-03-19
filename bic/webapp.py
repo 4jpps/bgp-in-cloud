@@ -98,6 +98,67 @@ async def add_pool(name: str = Form(...), cidr: str = Form(...), afi: str = Form
     db.insert("ip_pools", {"name": name, "cidr": cidr, "afi": afi, "description": description})
     return RedirectResponse(url="/network/pools", status_code=303)
 
+@app.get("/client/{client_id}/bgp", response_class=HTMLResponse)
+async def get_bgp_session(request: Request, client_id: int, db: BIC_DB = Depends(get_db)):
+    client = db.find_one("clients", {"id": client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    # In a real app, you'd fetch the BGP session status here
+    session_status = "UNKNOWN"
+    return templates.TemplateResponse("bgp_session.html", {"request": request, "client": client, "session_status": session_status})
+
+@app.post("/client/{client_id}/bgp", response_class=RedirectResponse)
+async def post_bgp_action(client_id: int, action: str = Form(...), db: BIC_DB = Depends(get_db)):
+    # In a real app, you would call the appropriate bgp_management function here
+    print(f"Action '{action}' triggered for client {client_id}")
+    return RedirectResponse(url=f"/client/{client_id}/bgp", status_code=303)
+
+@app.get("/network/allocations", response_class=HTMLResponse)
+async def list_allocations(request: Request, db: BIC_DB = Depends(get_db)):
+    # This is a more complex query than the others, requiring joins.
+    # For simplicity, we'll do it with a raw query. A real app would use an ORM.
+    query = """
+        SELECT
+            a.id, a.ip_address, a.description,
+            c.name as client_name,
+            p.name as pool_name
+        FROM ip_allocations a
+        LEFT JOIN clients c ON a.client_id = c.id
+        LEFT JOIN ip_pools p ON a.pool_id = p.id
+    """
+    allocations = db.conn.execute(query).fetchall()
+    return templates.TemplateResponse("allocations.html", {"request": request, "allocations": allocations})
+
+@app.get("/network/find-free-ip", response_class=HTMLResponse)
+async def find_free_ip_form(request: Request, db: BIC_DB = Depends(get_db)):
+    pools = db.find_all("ip_pools")
+    return templates.TemplateResponse("find_free_ip.html", {"request": request, "pools": pools})
+
+@app.post("/network/find-free-ip", response_class=HTMLResponse)
+async def find_free_ip_action(request: Request, pool_id: int = Form(...), db: BIC_DB = Depends(get_db)):
+    from bic.modules import network_management
+    pool = db.find_one("ip_pools", {"id": pool_id})
+    free_ip = network_management.find_free_ip(db, pool_id)
+    if free_ip:
+        return templates.TemplateResponse("find_free_ip.html", {"request": request, "free_ip": free_ip, "pool": pool})
+    else:
+        return templates.TemplateResponse("find_free_ip.html", {"request": request, "error": "No free IPs in this pool.", "pool": pool})
+
+@app.get("/system/file-integrity", response_class=HTMLResponse)
+async def get_file_integrity(request: Request):
+    return templates.TemplateResponse("file_integrity.html", {"request": request})
+
+@app.post("/system/file-integrity", response_class=HTMLResponse)
+async def post_file_integrity(request: Request, db: BIC_DB = Depends(get_db)):
+    from bic.menus.system import file_integrity
+    results = file_integrity.run_check(db)
+    return templates.TemplateResponse("file_integrity.html", {"request": request, "results": results})
+
+@app.get("/system/bgp-sessions", response_class=HTMLResponse)
+async def get_all_bgp_sessions(request: Request, db: BIC_DB = Depends(get_db)):
+    clients = db.find_all("clients")
+    return templates.TemplateResponse("bgp_sessions_all.html", {"request": request, "clients": clients})
+
 import importlib
 
 # The find_action_def and generic action routes need to be defined

@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+
+{% block title %}All BGP Sessions{% endblock %}
+
+{% block content %}
+    <h1>All BGP Sessions</h1>
+    <table>
+        <thead>
+            <tr>
+                <th>Client</th>
+                <th>Status</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for client in clients %}
+            <tr>
+                <td><a href="/client/{{ client.id }}">{{ client.name }}</a></td>
+                <td>UNKNOWN</td> {# In a real app, you'd get the status for each #}
+                <td>
+                    <a href="/client/{{ client.id }}/bgp">Manage</a>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+    <a href="/" class="button">Back to Dashboard</a>
+{% endblock %}

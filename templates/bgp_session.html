@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}BGP Session for {{ client.name }}{% endblock %}
+
+{% block content %}
+    <h1>BGP Session for: {{ client.name }}</h1>
+    <p><strong>Session Status:</strong> {{ session_status }}</p>
+    <form action="/client/{{ client.id }}/bgp" method="post">
+        <button type="submit" name="action" value="enable">Enable Session</button>
+        <button type="submit" name="action" value="disable">Disable Session</button>
+        <button type="submit" name="action" value="reset">Reset Session</button>
+    </form>
+    <a href="/clients" class="button">Back to Clients</a>
+{% endblock %}

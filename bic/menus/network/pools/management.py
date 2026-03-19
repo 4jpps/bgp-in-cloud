@@ -7,6 +7,8 @@ from textual.containers import VerticalScroll
 from bic.core import BIC_DB
 from bic.menus.network.pools.edit import EditDescriptionScreen # Re-use the existing edit screen
 from bic.menus.network.pools.add import AddPoolScreen
+from bic.menus.network.allocations.list import ListAllocationsScreen
+from bic.menus.network.allocations.find import FindFreeIPScreen
 
 class PoolManagementScreen(Screen):
     """Screen to manage IP pools."""
@@ -34,11 +36,17 @@ class PoolManagementScreen(Screen):
                     vs.mount(Button("Delete Pool", id=f"delete_{pool['id']}"))
                     vs.mount(Static("---"))
         yield Button("Add New Pool", id="add_pool", variant="success")
+        yield Button("List All Allocations", id="list_allocations")
+        yield Button("Find Free IP", id="find_free_ip")
         yield Footer()
     
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "add_pool":
             self.app.push_screen(AddPoolScreen(self.db_core))
+        elif event.button.id == "list_allocations":
+            self.app.push_screen(ListAllocationsScreen(self.db_core))
+        elif event.button.id == "find_free_ip":
+            self.app.push_screen(FindFreeIPScreen(self.db_core))
         elif event.button.id and event.button.id.startswith("edit_"):
             pool_id = int(event.button.id.split("_")[1])
             self.app.push_screen(EditDescriptionScreen(self.db_core, pool_id))

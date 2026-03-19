@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+
+{% block title %}Find Free IP{% endblock %}
+
+{% block content %}
+    <h1>Find Free IP Address</h1>
+    
+    {% if free_ip %}
+        <h2>Next Free IP in {{ pool.name }}:</h2>
+        <p style="font-size: 1.5em; color: #28a745;">{{ free_ip }}</p>
+        <a href="/network/find-free-ip" class="button">Check Another Pool</a>
+    {% elif error %}
+        <h2>Error:</h2>
+        <p style="color: #dc3545;">{{ error }}</p>
+        <a href="/network/find-free-ip" class="button">Try Again</a>
+    {% else %}
+        <h2>Select a Pool:</h2>
+        <form action="/network/find-free-ip" method="post">
+            <select name="pool_id" required>
+                {% for pool in pools %}
+                    <option value="{{ pool.id }}">{{ pool.name }} ({{ pool.cidr }})</option>
+                {% endfor %}
+            </select>
+            <button type="submit">Find Free IP</button>
+        </form>
+    {% endif %}
+
+    <a href="/network/pools" class="button">Back to Pools</a>
+{% endblock %}

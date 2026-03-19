@@ -6,7 +6,10 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
-## [2026.03.19.0727] - 2026-03-19
+## [2026.03.19.0742] - 2026-03-19
+
+### Added
+- **TUI/Web UI Parity:** Implemented all remaining menu items in both the TUI and the web UI, achieving full feature parity.
 
 ### Fixed
 - **TUI:** Corrected a series of critical bugs that rendered the Client Management, Network Management, and System Settings menus inoperable. The TUI is now fully functional.

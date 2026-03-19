@@ -73,7 +73,7 @@ def run(db_core: BIC_DB):
 
                 body_content = Layout()
                 body_content.split(
-                    StatsPanel(f"WAN Interface ({stats['wan_interface']})", stats["network"]),
+                    StatsPanel(f"WAN Interface ({stats.get('wan_interface', 'N/A')})", stats["network"]['wan']),
                     Panel("Future Traffic Graph", title="Traffic", border_style="blue")
                 )
                 layout["body"].update(body_content)

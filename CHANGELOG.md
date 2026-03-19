@@ -6,6 +6,12 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0611] - 2026-03-19
+
+### Fixed
+- **Legacy Crash:** Fixed a `KeyError: 'wan_interface'` crash on the legacy "System Dashboard" screen by safely handling the data.
+- **TUI Footer:** Corrected a layout issue that was causing the copyright and version footer to be hidden.
+
 ## [2026.03.19.0607] - 2026-03-19
 
 ### Fixed

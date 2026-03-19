@@ -18,7 +18,8 @@ def gather_all_statistics(db_core: BIC_DB) -> dict:
     stats = {
         'system': {'cpu_load': 'N/A', 'cpu_cores': 'N/A', 'mem_percent': 'N/A', 'disk_percent': 'N/A'},
         'network': {'wan': {'bytes_sent': 'N/A', 'bytes_recv': 'N/A'}},
-        'database': {'clients': 'N/A', 'ip_pools': 'N/A', 'ip_allocations': 'N/A', 'ip_subnets': 'N/A'}
+        'database': {'clients': 'N/A', 'ip_pools': 'N/A', 'ip_allocations': 'N/A', 'ip_subnets': 'N/A'},
+        'wan_interface': 'N/A'
     }
 
     # System Stats
@@ -42,6 +43,7 @@ def gather_all_statistics(db_core: BIC_DB) -> dict:
     # Network Stats
     try:
         wan_interface = _get_wan_interface()
+        stats['wan_interface'] = wan_interface or 'N/A'
         if wan_interface and os.path.exists(f"/sys/class/net/{wan_interface}"):
             net_io = psutil.net_io_counters(pernic=True).get(wan_interface)
             if net_io:

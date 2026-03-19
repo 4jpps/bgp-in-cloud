@@ -23,3 +23,6 @@ All notable changes to this project will be documented in this file.
 - TUI menu navigation by adding button press handlers for menu items.
 - Web UI template error by creating missing `generic_menu.html` template.
 - TUI statistics display KeyError by correcting dictionary key references.
+- Client provisioning navigation path mismatch between TUI and Web UI.
+- System statistics page by adding proper UIView definition.
+- Form select field rendering in Web UI with database-sourced options.

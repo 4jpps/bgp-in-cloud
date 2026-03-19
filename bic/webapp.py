@@ -80,17 +80,17 @@ async def render_page(request: Request, path: str, db: BIC_DB = Depends(get_db))
     elif isinstance(ui_item, UIAction):
         context["action"] = ui_item
 
-        initial_data = {}
+        data = {}
         if ui_item.loader:
             # Handle loaders for direct actions (e.g. from menu) which might need an ID from query params
             item_id = request.query_params.get("id")
             if item_id:
-                initial_data = ui_item.loader(db_core=db, id=int(item_id))
+                data = ui_item.loader(db_core=db, id=int(item_id))
             else:
                 # This branch handles loaders that don't need an ID (like for creation forms)
-                initial_data = ui_item.loader(db_core=db)
+                data = ui_item.loader(db_core=db)
 
-        context["initial_data"] = initial_data
+        context["data"] = data
         return templates.TemplateResponse("generic_form.html", context)
     else:
         raise HTTPException(status_code=500, detail="Invalid UI item type")
@@ -107,13 +107,13 @@ async def render_action_form(request: Request, path: str, action_name_slug: str,
     if not action:
         raise HTTPException(status_code=404, detail=f"Action '{action_name_slug}' not found")
 
-    initial_data = {}
+    data = {}
     if action.loader:
-        initial_data = action.loader(db_core=db, id=item_id)
-        if not initial_data:
+        data = action.loader(db_core=db, id=item_id)
+        if not data:
             raise HTTPException(status_code=404, detail="Item to edit not found")
 
-    context = {"request": request, "menu": menu_structure, "action": action, "initial_data": initial_data, "current_path": full_path}
+    context = {"request": request, "menu": menu_structure, "action": action, "data": data, "current_path": full_path}
     return templates.TemplateResponse("generic_form.html", context)
 
 @app.post("/action/{path:path}", response_class=RedirectResponse)

@@ -68,7 +68,7 @@ def run(db_core: BIC_DB):
                 header_text = Align.center("[bold]BIC IPAM - System Dashboard[/bold]", vertical="middle")
                 layout["header"].update(Panel(header_text, border_style="green"))
 
-                layout["ipam_stats"].update(StatsPanel("IPAM Stats", stats["ipam"]))
+                layout["ipam_stats"].update(StatsPanel("IPAM Stats", stats["database"]))
                 layout["system_stats"].update(StatsPanel("System Stats", stats["system"]))
 
                 body_content = Layout()

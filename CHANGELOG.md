@@ -6,6 +6,15 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0607] - 2026-03-19
+
+### Fixed
+- **Disk Stat:** The disk usage statistic is now correctly gathered on Debian systems by using a more portable method.
+- **Legacy Crash:** Fixed a `KeyError: 'ipam'` crash on the legacy "System Dashboard" screen.
+
+### Changed
+- **Footer:** The TUI footer has been cleaned up and now displays the copyright information as requested.
+
 ## [2026.03.19.0557] - 2026-03-19
 
 ### Changed
@@ -127,4 +136,3 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 - Corrected a text formatting issue that was causing the time display to be garbled.
 
 ## [Unreleased]
-

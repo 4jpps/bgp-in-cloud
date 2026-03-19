@@ -26,7 +26,16 @@ def gather_all_statistics(db_core: BIC_DB) -> dict:
         stats['system']['cpu_load'] = psutil.cpu_percent(interval=0.5)
         stats['system']['cpu_cores'] = psutil.cpu_count(logical=False)
         stats['system']['mem_percent'] = psutil.virtual_memory().percent
-        stats['system']['disk_percent'] = shutil.disk_usage("/").percent
+        try:
+            stats['system']['disk_percent'] = shutil.disk_usage("/").percent
+        except (FileNotFoundError, PermissionError):
+            # Fallback for environments where root isn't accessible or doesn't exist (e.g., some containers)
+            try:
+                df_output = subprocess.check_output(['df', '/'], text=True)
+                usage_percent = df_output.splitlines()[1].split()[-2].replace('%', '')
+                stats['system']['disk_percent'] = float(usage_percent)
+            except (subprocess.CalledProcessError, IndexError, ValueError):
+                stats['system']['disk_percent'] = 'N/A'
     except Exception:
         pass # Defaults will be used
 

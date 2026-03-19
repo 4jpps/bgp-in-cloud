@@ -139,6 +139,7 @@ async def handle_provision_client(request: Request, db: BIC_DB = Depends(get_db)
     # Extract arguments for provision_new_client
     client_name = form_dict.get("client_name")
     client_email = form_dict.get("client_email")
+    client_type = form_dict.get("client_type")
     wg_config_name = form_dict.get("wg_config_name")
     p2p_ipv4_pool_id = form_dict.get("p2p_ipv4_pool_id")
     p2p_ipv6_pool_id = form_dict.get("p2p_ipv6_pool_id")
@@ -155,6 +156,7 @@ async def handle_provision_client(request: Request, db: BIC_DB = Depends(get_db)
         db_core=db, 
         client_name=client_name,
         client_email=client_email,
+        client_type=client_type,
         wg_config_name=wg_config_name,
         p2p_ipv4_pool_id=p2p_ipv4_pool_id,
         p2p_ipv6_pool_id=p2p_ipv6_pool_id,

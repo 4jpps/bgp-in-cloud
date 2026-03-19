@@ -1,0 +1,52 @@
+/* Main application grid */
+#app-grid {
+    layout: horizontal;
+}
+
+/* Left pane for menu */
+#menu-pane {
+    width: 30%;
+    border: solid green;
+}
+
+#menu-title {
+    content-align: center middle;
+    width: 100%;
+    padding: 1;
+    background: $primary-background-darken-1;
+}
+
+Menu {
+    padding: 1;
+    width: 100%;
+}
+
+Menu > Button {
+    width: 100%;
+    margin-bottom: 1;
+}
+
+#back-button {
+    width: 100%;
+    margin-top: 2;
+    background: $error;
+}
+
+/* Right pane for stats */
+#stats-pane {
+    width: 70%;
+    border: solid blue;
+}
+
+StatsTable > DataTable {
+    height: 100%;
+}
+
+Header {
+    background: $primary;
+    color: $text;
+}
+
+Footer {
+    background: $primary-darken-2;
+}

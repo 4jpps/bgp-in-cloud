@@ -6,6 +6,16 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0459] - 2026-03-19
+
+### Added
+- **Major TUI Overhaul:** The TUI has been completely rewritten using the Textual framework to provide a modern, GUI-like experience.
+- **Native Mouse Support:** The TUI menu is now composed of distinct buttons that are fully clickable with a mouse.
+- **Live Statistics Panel:** A live-updating statistics panel is now a permanent fixture on the right side of the TUI.
+
+### Changed
+- The TUI now uses a CSS file (`main_menu.css`) for styling and layout.
+
 ## [2026.03.19.0450] - 2026-03-19
 
 ### Fixed

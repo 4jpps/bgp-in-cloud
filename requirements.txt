@@ -1,3 +1,4 @@
+textual
 rich
 readchar
 fastapi

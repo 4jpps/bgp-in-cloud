@@ -28,3 +28,4 @@ All notable changes to this project will be documented in this file.
 - Form select field rendering in Web UI with database-sourced options.
 - Missing UIView import causing NameError on TUI startup.
 - Missing __main__.py preventing TUI from running and enabling navigation.
+- TUI button focus to enable keyboard navigation.

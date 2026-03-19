@@ -1,7 +1,5 @@
 # BGP in the Cloud (BIC) IPAM
 
-**Version:** 1.0.1
-
 ## Overview
 
 BGP in the Cloud (BIC) is a self-hosted IP Address Management (IPAM) and network automation platform designed for small-scale service providers, hobbyists, and labs. It provides both a Text-based UI (TUI) and a full-featured Web UI to automate the complex and repetitive tasks of provisioning network services for customers, including IP assignments, WireGuard VPN tunnels, BGP sessions, and firewall management.
@@ -58,18 +56,9 @@ To update your instance of BGP in the Cloud to the latest version, follow these 
     sudo ./bic-installer.sh
     ```
 
-## Project Architecture
+## Documentation
 
-The architecture is designed to be modular and definition-driven, ensuring that both the TUI and Web UI are powered by the same consistent backend logic.
-
-- **`bic-start.sh`**: Dual-mode startup script. Use `--tui` for the text interface and `--web` for the web interface.
-- **`bic/__version__.py`**: Declares the application's version number.
-- **`bic/core.py`**: Contains the core `BIC_DB` class for all database interactions.
-- **`bic/modules/`**: The heart of the backend. Each module contains the centralized business logic for a specific domain (e.g., `client_management.py`, `wireguard_management.py`). These modules are called by both the TUI and the Web UI.
-- **`bic/menus/menu_structure.py`**: The single source of truth for the application's user interface. This dictionary defines the menu hierarchy and actions for both UIs.
-- **`bic/tui/`**: Contains the TUI-specific presentation logic.
-- **`bic/webapp.py`**: A fully dynamic FastAPI application that serves the Web UI.
-- **`bic/templates/`**: Jinja2 templates for the web UI. The main navigation and all action forms are dynamically generated from the `menu_structure.py` file.
+Comprehensive technical documentation, including the Developer Guide, Licensing, and Security Policy, can be found in the `docs/` directory.
 
 ## License
 

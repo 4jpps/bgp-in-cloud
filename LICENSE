@@ -34,7 +34,7 @@ Jeff Parrish PC Services shall at all times retain ownership of the Software as 
 
 ### Third-Party Modules
 
-This Software is designed to be extended by third-party modules. The terms for the development, distribution, and use of such modules are governed by a separate agreement, detailed in the `MODULE_DEVELOPMENT.md` file. Jeff Parrish PC Services makes no warranties and assumes no liability for the functionality, security, or performance of any third-party modules.
+This Software is designed to be extended by third-party modules. The terms for the development, distribution, and use of such modules are governed by a separate agreement, detailed in the `docs/MODULE_DEVELOPMENT.md` file. Jeff Parrish PC Services makes no warranties and assumes no liability for the functionality, security, or performance of any third-party modules.
 
 ### Disclaimer of Warranty
 

@@ -29,3 +29,4 @@ All notable changes to this project will be documented in this file.
 - Missing UIView import causing NameError on TUI startup.
 - Missing __main__.py preventing TUI from running and enabling navigation.
 - TUI button focus to enable keyboard navigation.
+- BGP sessions list error handling for missing database table.

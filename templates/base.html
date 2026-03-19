@@ -3,13 +3,13 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}{{ settings.branding_company_name | default('BIC IPAM') }}{% endblock %}</title>
+    <title>{% block title %}{{ request.state.settings.branding_company_name | default('BIC IPAM') }}{% endblock %}</title>
     <link href="{{ url_for('static', path='/style.css') }}" rel="stylesheet">
 </head>
 <body class="bg-gray-100 text-gray-800">
 
     <nav class="navbar">
-        <a href="/" class="nav-brand">{{ settings.branding_company_name | default('BIC IPAM') }}</a>
+        <a href="/" class="nav-brand">{{ request.state.settings.branding_company_name | default('BIC IPAM') }}</a>
         <div class="nav-links">
             {% macro render_menu(items, parent_path='') %}
                 {% for item in items %}
@@ -28,8 +28,8 @@
     </main>
 
     <footer class="footer">
-        Copyright &copy; {{ "now" | strftime("%Y") }} {{ settings.branding_company_name | default('Your Company') }}. 
-        Version: {{ version }}
+        Copyright &copy; {{ "now" | strftime("%Y") }} {{ request.state.settings.branding_company_name | default('Your Company') }}. 
+        Version: {{ request.state.version }}
     </footer>
 
 </body>

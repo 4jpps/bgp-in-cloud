@@ -17,9 +17,6 @@ BASE_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
 
-# --- Global Settings ---
-APP_SETTINGS = {}
-
 # --- Database Dependency ---
 def get_db():
     db = BIC_DB(base_dir=str(BASE_DIR.parent))
@@ -28,10 +25,15 @@ def get_db():
     finally:
         db.conn.close()
 
-# --- Global Template Context Processor (The Correct Way) ---
-@templates.context_processor
-def get_global_context(request: Request):
-    return {"settings": APP_SETTINGS, "version": __version__}
+# --- Global Context Middleware (The Correct Way for FastAPI) ---
+@app.middleware("http")
+async def add_global_context(request: Request, call_next):
+    db = next(get_db())
+    settings = system_management.get_all_settings(db)
+    request.state.settings = settings
+    request.state.version = __version__
+    response = await call_next(request)
+    return response
 
 # --- Helper function to find schema items ---
 def find_ui_item_by_path(path: str):
@@ -115,10 +117,6 @@ async def system_stats_page(request: Request, db: BIC_DB = Depends(get_db)):
 
 @app.on_event("startup")
 async def startup_event():
-    global APP_SETTINGS
-    db = next(get_db())
-    APP_SETTINGS = system_management.get_all_settings(db)
-    
     from bic.modules import firewall_management
     print("  -> Ensuring NAT rules for private ranges...")
     firewall_management.ensure_nat_rules()

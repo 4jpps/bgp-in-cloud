@@ -6,6 +6,12 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0642] - 2026-03-19
+
+### Fixed
+- **TUI Crash:** Corrected a `VisualError` in the `SystemDashboardScreen` by refactoring it to use stateful widgets, which is a more robust `textual` pattern.
+- **Web App Crash:** Corrected a `sqlite3.ProgrammingError` that occurred due to improper multi-threaded database access.
+
 ## [2026.03.19.0638] - 2026-03-19
 
 ### Fixed

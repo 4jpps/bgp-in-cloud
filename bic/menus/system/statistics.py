@@ -1,7 +1,7 @@
 from textual.screen import Screen
 from textual.widgets import Header, Footer, Static
 from textual.binding import Binding
-from textual.containers import Container, Horizontal, Vertical
+from textual.containers import Container, Vertical
 from rich.panel import Panel
 from rich.table import Table
 
@@ -41,10 +41,10 @@ class SystemDashboardScreen(Screen):
         yield Header(show_clock=True)
         with Container(id="main-container"):
             with Vertical(id="side-pane"):
-                yield Static(id="ipam-stats")
-                yield Static(id="system-stats")
+                yield StatsPanel("IPAM Stats", {}, id="ipam-stats")
+                yield StatsPanel("System Stats", {}, id="system-stats")
             with Vertical(id="body-pane"):
-                yield Static(id="wan-stats")
+                yield StatsPanel("WAN Interface", {}, id="wan-stats")
                 yield Static(Panel("Future Traffic Graph", title="Traffic", border_style="blue"))
         yield Footer()
 
@@ -54,6 +54,16 @@ class SystemDashboardScreen(Screen):
 
     def update_stats(self) -> None:
         stats = statistics_management.gather_all_statistics(self.db_core)
-        self.query_one("#ipam-stats").update(StatsPanel("IPAM Stats", stats["database"]))
-        self.query_one("#system-stats").update(StatsPanel("System Stats", stats["system"]))
-        self.query_one("#wan-stats").update(StatsPanel(f"WAN Interface ({stats.get('wan_interface', 'N/A')})", stats["network"]['wan']))
+        
+        ipam_panel = self.query_one("#ipam-stats", StatsPanel)
+        ipam_panel.stats_dict = stats["database"]
+        ipam_panel.refresh()
+
+        system_panel = self.query_one("#system-stats", StatsPanel)
+        system_panel.stats_dict = stats["system"]
+        system_panel.refresh()
+
+        wan_panel = self.query_one("#wan-stats", StatsPanel)
+        wan_panel.title = f"WAN Interface ({stats.get('wan_interface', 'N/A')})"
+        wan_panel.stats_dict = stats["network"]['wan']
+        wan_panel.refresh()

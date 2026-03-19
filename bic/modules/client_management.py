@@ -50,4 +50,8 @@ def edit_client_from_form(db_core: BIC_DB, id: int, name: str, email: str):
     """Wrapper for web form to edit a client."""
     return update_client_details(db_core=db_core, client_id=id, new_name=name, new_email=email)
 
+def delete_client_from_form(db_core: BIC_DB, id: int):
+    """Wrapper for web form to delete a client."""
+    return deprovision_and_delete_client(db_core=db_core, client_id=id)
+
 # --- Other client management functions are omitted for brevity ---

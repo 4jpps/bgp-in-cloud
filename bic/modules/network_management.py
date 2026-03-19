@@ -89,4 +89,18 @@ def swap_pool_prefix(db_core: BIC_DB, pool_id: int, new_cidr: str):
     console.print(f"[bold green]✅ Pool swap completed successfully.[/bold green]")
     return {"success": True, "message": f"Successfully swapped prefix for pool '{pool['name']}'."}
 
+def find_and_allocate_subnet_from_form(db_core: BIC_DB, pool_id: int, prefix_len: int, client_id: int = None):
+    """Wrapper for UI form to find and allocate a subnet."""
+    subnet, subnet_id = find_and_allocate_subnet(db_core, int(pool_id), int(prefix_len))
+    if subnet and client_id:
+        db_core.update('ip_subnets', subnet_id, {'client_id': int(client_id)})
+    return {"success": bool(subnet), "message": f"Allocated {subnet}" if subnet else "Failed to allocate subnet."}
+
+def get_next_available_ip_from_form(db_core: BIC_DB, pool_id: int, client_id: int = None):
+    """Wrapper for UI form to get the next available IP."""
+    ip, alloc_id = get_next_available_ip_in_pool(db_core, int(pool_id))
+    if ip and client_id:
+        db_core.update('ip_allocations', alloc_id, {'client_id': int(client_id)})
+    return {"success": bool(ip), "message": f"Allocated {ip}" if ip else "Failed to allocate IP."}
+
 # --- Allocation logic and other functions omitted for brevity --- 

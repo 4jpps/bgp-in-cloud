@@ -97,8 +97,12 @@ async def handle_form_post(request: Request, path: str, db: BIC_DB = Depends(get
     handler_kwargs = {"db_core": db, **form_dict}
     ui_item.item.handler(**handler_kwargs)
     
-    parent_path = "/" + "/".join(path.split("/")[:-1])
-    return RedirectResponse(url=f"/page{parent_path}", status_code=303)
+    # Convention: after a POST, redirect to the 'list' view for that path.
+    path_parts = path.strip("/").split("/")
+    path_parts[-1] = "list"
+    redirect_path = "/" + "/".join(path_parts)
+    
+    return RedirectResponse(url=f"/page{redirect_path}", status_code=303)
 
 # --- Special Case Routes ---
 @app.get("/clients/provision/new", response_class=HTMLResponse)

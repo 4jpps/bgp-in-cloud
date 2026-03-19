@@ -27,3 +27,4 @@ All notable changes to this project will be documented in this file.
 - System statistics page by adding proper UIView definition.
 - Form select field rendering in Web UI with database-sourced options.
 - Missing UIView import causing NameError on TUI startup.
+- Missing __main__.py preventing TUI from running and enabling navigation.

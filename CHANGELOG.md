@@ -30,3 +30,4 @@ All notable changes to this project will be documented in this file.
 - Missing __main__.py preventing TUI from running and enabling navigation.
 - TUI button focus to enable keyboard navigation.
 - BGP sessions list error handling for missing database table.
+- Browser translation prompts by adding notranslate meta tag.

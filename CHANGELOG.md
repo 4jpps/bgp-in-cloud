@@ -6,6 +6,11 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0635] - 2026-03-19
+
+### Fixed
+- **TUI Crash:** Corrected a crash in the `SystemDashboardScreen` by refactoring the layout to be more compliant with the `textual` framework.
+
 ## [2026.03.19.0633] - 2026-03-19
 
 ### Fixed

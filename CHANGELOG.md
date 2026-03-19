@@ -6,6 +6,11 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0656] - 2026-03-19
+
+### Fixed
+- **Web App Crash:** Corrected an `AttributeError` during startup by removing incorrect calls to private schema creation methods. Database initialization is now handled correctly by the `BIC_DB` constructor.
+
 ## [2026.03.19.0649] - 2026-03-19
 
 ### Changed

@@ -31,9 +31,8 @@ def get_db():
 
 @app.on_event("startup")
 def startup_event():
-    db = get_db()
-    db._create_schema()
-    db._check_and_run_migrations()
+    # This ensures the DB is initialized when the app starts.
+    get_db()
 
 
 # --- Helper Functions ---

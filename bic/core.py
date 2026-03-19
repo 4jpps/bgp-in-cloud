@@ -264,8 +264,8 @@ class BIC_DB:
     def _seed_initial_data(self):
         """Seeds the database with essential data like system IP pools if they don't exist."""
         initial_pools = [
-            {"name": "WG Server P2P IPv4", "cidr": "172.31.0.0/30", "description": "WireGuard server point-to-point network (IPv4)", "afi": "ipv4"},
-            {"name": "WG Server P2P IPv6", "cidr": "fd31::/126", "description": "WireGuard server point-to-point network (IPv6)", "afi": "ipv6"},
+            {"name": "WG Server P2P IPv4", "cidr": "172.31.0.0/24", "description": "WireGuard server point-to-point network (IPv4)", "afi": "ipv4"},
+            {"name": "WG Server P2P IPv6", "cidr": "fd31::/64", "description": "WireGuard server point-to-point network (IPv6)", "afi": "ipv6"},
         ]
 
         for pool in initial_pools:

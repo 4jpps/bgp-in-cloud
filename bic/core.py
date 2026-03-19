@@ -228,6 +228,7 @@ class BIC_DB:
         cursor = self._execute(query, tuple(criteria.values()))
         row = cursor.fetchone()
         return dict(row) if row else None
+        return dict(row) if row else None
 
     def find_all(self, table):
         """Finds all records in a table."""
@@ -235,12 +236,19 @@ class BIC_DB:
         rows = cursor.fetchall()
         return [dict(row) for row in rows]
 
+    def get_setting(self, key, default=None):
+        """Gets a specific setting value from the database."""
+        setting = self.find_one('settings', {'key': key})
+        return setting['value'] if setting else default
+        return [dict(row) for row in rows]
+
     def find_all_by(self, table, criteria):
         """Finds all records in a table based on criteria."""
-        where_clause = " AND ".join([f"{key} = ?" for key in criteria.keys()])
+        where_clause = " AND ".join([f'{key} = ?' for key in criteria.keys()])
         query = f"SELECT * FROM {table} WHERE {where_clause}"
         cursor = self._execute(query, tuple(criteria.values()))
         rows = cursor.fetchall()
+        return [dict(row) for row in rows]
         return [dict(row) for row in rows]
         
     def delete(self, table_name, record_id):

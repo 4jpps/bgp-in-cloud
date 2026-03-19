@@ -7,15 +7,22 @@ PEERS_CONF_FILE = "/etc/bird/peers.conf"
 
 def list_bgp_sessions(db_core: BIC_DB):
     """Lists all BGP sessions from the database with client info."""
-    query = '''
-        SELECT
-            s.id, s.state, s.last_updated,
-            c.name as client_name, c.asn as client_asn
-        FROM bgp_sessions s
-        JOIN clients c ON s.client_id = c.id
-    '''
-    rows = db_core.conn.execute(query).fetchall()
-    return [dict(row) for row in rows]
+    sessions = db_core.find_all_by("bgp_sessions", {})
+    clients_list = db_core.find_all_by("clients", {})
+    clients_map = {c['id']: c for c in clients_list}
+
+    results = []
+    for session in sessions:
+        client = clients_map.get(session['client_id'])
+        if client:
+            results.append({
+                "id": session['id'],
+                "state": session['state'],
+                "last_updated": session['last_updated'],
+                "client_name": client['name'],
+                "client_asn": client['asn']
+            })
+    return results
 
 def create_client_bgp_config(db_core: BIC_DB, client: dict):
     """Generates a BGP session config for our server and returns it as a string."""

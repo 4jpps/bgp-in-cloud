@@ -178,5 +178,6 @@ def list_peers_joined(db_core: BIC_DB):
         LEFT JOIN clients c ON p.client_id = c.id
         LEFT JOIN wireguard_interfaces i ON p.interface_id = i.id
     """
-    return db_core.conn.execute(query).fetchall()
+    rows = db_core.conn.execute(query).fetchall()
+    return [dict(row) for row in rows]
 

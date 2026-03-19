@@ -238,4 +238,18 @@ def find_free_ip_for_web(db_core: BIC_DB, pool_id: int):
     """Web UI wrapper to find the next available IP and return a result."""
     ip = get_next_available_ip_in_pool(db_core, int(pool_id))
     return {"success": bool(ip), "message": f"Found free IP: {ip}" if ip else "No free IPs available."}
+
+def list_all_allocations_joined(db_core: BIC_DB):
+    """Lists all IP allocations and joins them with pool and client info."""
+    query = '''
+        SELECT
+            a.id, a.ip_address, a.description,
+            p.name as pool_name,
+            c.name as client_name
+        FROM ip_allocations a
+        LEFT JOIN ip_pools p ON a.pool_id = p.id
+        LEFT JOIN clients c ON a.client_id = c.id
+    '''
+    rows = db_core.conn.execute(query).fetchall()
+    return [dict(row) for row in rows]
 # --- Allocation logic and other functions omitted for brevity --- 

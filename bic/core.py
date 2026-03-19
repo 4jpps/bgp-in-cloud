@@ -197,10 +197,11 @@ class BIC_DB:
             self._execute(f"ALTER TABLE {table_name} ADD COLUMN {column_name} {column_type}")
             self.conn.commit()
 
-    def insert(self, table_name, data):
+    def insert(self, table_name, data, or_ignore=False):
         keys = ', '.join(data.keys())
         placeholders = ', '.join(['?'] * len(data))
-        query = f"INSERT INTO {table_name} ({keys}) VALUES ({placeholders})"
+        verb = "INSERT OR IGNORE" if or_ignore else "INSERT"
+        query = f"{verb} INTO {table_name} ({keys}) VALUES ({placeholders})"
         cursor = self._execute(query, tuple(data.values()))
         self.conn.commit()
         return cursor.lastrowid

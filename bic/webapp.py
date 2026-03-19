@@ -136,33 +136,8 @@ async def handle_provision_client(request: Request, db: BIC_DB = Depends(get_db)
     form_data = await request.form()
     form_dict = {k: v for k, v in form_data.items()}
 
-    # Extract arguments for provision_new_client
-    client_name = form_dict.get("client_name")
-    client_email = form_dict.get("client_email")
-    client_type = form_dict.get("client_type")
-    wg_config_name = form_dict.get("wg_config_name")
-    p2p_ipv4_pool_id = form_dict.get("p2p_ipv4_pool_id")
-    p2p_ipv6_pool_id = form_dict.get("p2p_ipv6_pool_id")
-    customer_lan_pool_id = form_dict.get("customer_lan_pool_id")
-    transit_pool_id = form_dict.get("transit_pool_id")
-
-    # Convert pool IDs to integers, handling None
-    p2p_ipv4_pool_id = int(p2p_ipv4_pool_id) if p2p_ipv4_pool_id else None
-    p2p_ipv6_pool_id = int(p2p_ipv6_pool_id) if p2p_ipv6_pool_id else None
-    customer_lan_pool_id = int(customer_lan_pool_id) if customer_lan_pool_id else None
-    transit_pool_id = int(transit_pool_id) if transit_pool_id else None
-
-    client_management.provision_new_client(
-        db_core=db, 
-        client_name=client_name,
-        client_email=client_email,
-        client_type=client_type,
-        wg_config_name=wg_config_name,
-        p2p_ipv4_pool_id=p2p_ipv4_pool_id,
-        p2p_ipv6_pool_id=p2p_ipv6_pool_id,
-        customer_lan_pool_id=customer_lan_pool_id,
-        transit_pool_id=transit_pool_id
-    )
+    # Pass the whole form dictionary to the handler
+    client_management.provision_new_client(db_core=db, **form_dict)
     return RedirectResponse(url="/page/clients/list", status_code=303)
 
 @app.get("/system/statistics", response_class=HTMLResponse)

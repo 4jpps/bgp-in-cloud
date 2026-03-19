@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIC IPAM Dashboard</title>
+    <link href="{{ url_for('static', path='/style.css') }}" rel="stylesheet">
+</head>
+<body>
+    <h1>BIC IPAM Dashboard</h1>
+    <h2>System Statistics</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Metric</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>CPU Load</td>
+                <td>{{ stats.system.cpu_load }}% / {{ stats.system.cpu_cores }}c</td>
+            </tr>
+            <tr>
+                <td>Memory</td>
+                <td>{{ stats.system.mem_percent }}% used</td>
+            </tr>
+            <tr>
+                <td>Disk</td>
+                <td>{{ stats.system.disk_percent }}% used</td>
+            </tr>
+            <tr>
+                <td>WAN Out</td>
+                <td>{{ stats.network.wan.bytes_sent }}</td>
+            </tr>
+            <tr>
+                <td>WAN In</td>
+                <td>{{ stats.network.wan.bytes_recv }}</td>
+            </tr>
+        </tbody>
+    </table>
+    
+    <h2>Database Statistics</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>Metric</th>
+                <th>Value</th>
+            </tr>
+        </thead>
+        <tbody>
+            <tr>
+                <td>Clients</td>
+                <td>{{ stats.database.clients }}</td>
+            </tr>
+            <tr>
+                <td>IP Pools</td>
+                <td>{{ stats.database.ip_pools }}</td>
+            </tr>
+            <tr>
+                <td>IP Allocations</td>
+                <td>{{ stats.database.ip_allocations }}</td>
+            </tr>
+            <tr>
+                <td>Subnets</td>
+                <td>{{ stats.database.ip_subnets }}</td>
+            </tr>
+        </tbody>
+    </table>
+
+    <h2>Clients</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th>
+                <th>Name</th>
+                <th>Email</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for client in clients %}
+            <tr>
+                <td>{{ client.id }}</td>
+                <td><a href="/client/{{ client.id }}">{{ client.name }}</a></td>
+                <td>{{ client.email }}</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+
+</body>
+</html>

@@ -6,6 +6,11 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0646] - 2026-03-19
+
+### Fixed
+- **Web App Crash:** Corrected a `sqlite3.ProgrammingError` and `jinja2.exceptions.TemplateNotFound` error that prevented the web application from starting. The database is now initialized correctly, and the required template files have been created.
+
 ## [2026.03.19.0642] - 2026-03-19
 
 ### Fixed

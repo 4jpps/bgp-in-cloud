@@ -27,9 +27,14 @@ templates.env.globals['MENU_STRUCTURE'] = MENU_STRUCTURE
 templates.env.globals['settings'] = settings_management.get_all_settings(BIC_DB(base_dir=BASE_DIR))
 
 def get_db():
-    # In a real app, you'd use a dependency injection system that manages
-    # the DB connection lifecycle per request.
     return BIC_DB(base_dir=BASE_DIR)
+
+@app.on_event("startup")
+def startup_event():
+    db = get_db()
+    db._create_schema()
+    db._check_and_run_migrations()
+
 
 # --- Helper Functions ---
 def find_action_def(action_path: str):

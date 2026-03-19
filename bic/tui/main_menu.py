@@ -8,7 +8,7 @@ from textual.widgets import Button, Header, Static
 
 from bic.core import BIC_DB
 from bic.ui import main_menu as menu_structure
-from bic.ui.schema import UIMenuItem, UIAction, UIView
+from bic.ui.schema import UIMenu, UIMenuItem, UIAction, UIView
 from bic.tui.generic_screens import GenericListScreen, GenericFormScreen
 from bic.tui.provision_client_screen import ProvisionClientScreen
 from bic.__version__ import __version__

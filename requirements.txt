@@ -7,3 +7,4 @@ psutil
 pydantic
 aiosqlite
 jinja2
+python-multipart

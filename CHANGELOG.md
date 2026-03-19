@@ -6,6 +6,11 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0715] - 2026-03-19
+
+### Fixed
+- **Web App:** Added the missing `python-multipart` dependency to `requirements.txt` to resolve a `RuntimeError` on form submission.
+
 ## [2026.03.19.0713] - 2026-03-19
 
 ### Added

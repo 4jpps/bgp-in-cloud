@@ -230,6 +230,7 @@ class BIC_DB:
         return dict(row) if row else None
 
     def find_all(self, table):
+        """Finds all records in a table."""
         cursor = self._execute(f"SELECT * FROM {table}")
         rows = cursor.fetchall()
         return [dict(row) for row in rows]

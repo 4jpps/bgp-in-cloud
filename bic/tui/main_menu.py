@@ -45,6 +45,12 @@ class MainMenuScreen(Screen):
         if self.menu_data.name == "Main Menu":
             self.update_stats()
             self.set_interval(30, self.update_stats)
+        # Focus the first button for keyboard navigation
+        try:
+            first_button = self.query_one("Button")
+            first_button.focus()
+        except:
+            pass
 
     def update_stats(self) -> None:
         stats = statistics_management.gather_all_statistics(self.db_core)

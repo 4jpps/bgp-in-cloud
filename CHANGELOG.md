@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026.03.19.0525] - 2026-03-19
+
+### Fixed
+- Resolved a `KeyError: 'cpu_load'` on startup by correcting the `statistics_management` module to provide the real-time CPU percentage that the TUI dashboard expects.
+
 ## [2026.03.19.0511] - 2026-03-19
 
 ### Fixed

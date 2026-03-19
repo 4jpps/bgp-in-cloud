@@ -35,12 +35,14 @@ def get_network_stats(interface: str):
 def get_system_stats():
     """Gathers general system statistics like load, memory, and disk usage."""
     try:
-        load_avg = psutil.getloadavg()
+        cpu_percent = psutil.cpu_percent(interval=1)
+        cpu_cores = psutil.cpu_count(logical=False) # Physical cores
         mem_info = psutil.virtual_memory()
         disk_info = shutil.disk_usage("/")
         return {
-            "load_avg": f"{load_avg[0]:.2f}, {load_avg[1]:.2f}, {load_avg[2]:.2f}",
-            "memory_percent": mem_info.percent,
+            "cpu_load": cpu_percent,
+            "cpu_cores": cpu_cores,
+            "mem_percent": mem_info.percent,
             "disk_percent": disk_info.percent,
         }
     except Exception:

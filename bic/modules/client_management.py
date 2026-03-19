@@ -41,4 +41,13 @@ def regenerate_client_configs(db_core: BIC_DB, client_id: int):
 
     return {"success": True, "client_id": client_id}
 
+def update_client_details(db_core: BIC_DB, client_id: int, new_name: str, new_email: str):
+    """Updates a client's name and email."""
+    db_core.update('clients', client_id, {'name': new_name, 'email': new_email})
+    return {"success": True, "message": "Client details updated."}
+
+def edit_client_from_form(db_core: BIC_DB, id: int, name: str, email: str):
+    """Wrapper for web form to edit a client."""
+    return update_client_details(db_core=db_core, client_id=id, new_name=name, new_email=email)
+
 # --- Other client management functions are omitted for brevity ---

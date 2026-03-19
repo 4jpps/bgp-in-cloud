@@ -54,22 +54,12 @@ view_clients = UIView(
     ]
 )
 
-add_client = UIAction(
-    name="Add Client",
-    handler=client_management.add_client,
-    form_fields=[
-        FormField(name="name", label="Name", required=True),
-        FormField(name="email", label="Email", type="email"),
-        FormField(name="asn", label="ASN", type="number"),
-    ]
-)
-
 # Define the menu that uses them
 client_menu = UIMenu(
     name="Client Management",
     items=[
         UIMenuItem(name="List Clients", path="/clients/list", item=view_clients),
-        UIMenuItem(name="Provision New Client", path="/clients/provision/new", item=add_client),
+        UIMenuItem(name="Provision New Client", path="/clients/provision/new"), # This now correctly points to the special workflow
     ]
 )
 

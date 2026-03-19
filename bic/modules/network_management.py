@@ -103,4 +103,34 @@ def get_next_available_ip_from_form(db_core: BIC_DB, pool_id: int, client_id: in
         db_core.update('ip_allocations', alloc_id, {'client_id': int(client_id)})
     return {"success": bool(ip), "message": f"Allocated {ip}" if ip else "Failed to allocate IP."}
 
+def edit_pool_from_form(db_core: BIC_DB, id: int, name: str, cidr: str, description: str):
+    """Wrapper for UI form to edit a pool."""
+    # This is a placeholder for a more complex update logic if needed
+    db_core.update('ip_pools', id, {'name': name, 'cidr': cidr, 'description': description})
+    update_bird_configs(db_core)
+    return {"success": True, "message": "Pool updated successfully."}
+
+def delete_pool_from_form(db_core: BIC_DB, id: int):
+    """Wrapper for UI form to delete a pool."""
+    return delete_pool(db_core=db_core, pool_id=int(id))
+
+def list_all_allocations_joined(db_core: BIC_DB):
+    """Lists all IP allocations and joins them with pool and client info."""
+    query = '''
+        SELECT
+            a.id, a.ip_address, a.description,
+            p.name as pool_name,
+            c.name as client_name
+        FROM ip_allocations a
+        LEFT JOIN ip_pools p ON a.pool_id = p.id
+        LEFT JOIN clients c ON a.client_id = c.id
+    '''
+    return db_core.conn.execute(query).fetchall()
+
+def find_free_ip_for_web(db_core: BIC_DB, pool_id: int):
+    """Web UI wrapper to find the next available IP and return a result."""
+    ip, alloc_id = get_next_available_ip_in_pool(db_core, int(pool_id))
+    # Note: This does not assign it to a client, just reserves it.
+    return {"success": bool(ip), "message": f"Reserved IP: {ip}" if ip else "No free IPs available."}
+
 # --- Allocation logic and other functions omitted for brevity --- 

@@ -5,6 +5,17 @@ from bic.core import BIC_DB
 CONSOLE = Console()
 PEERS_CONF_FILE = "/etc/bird/peers.conf"
 
+def list_bgp_sessions(db_core: BIC_DB):
+    """Lists all BGP sessions from the database with client info."""
+    query = '''
+        SELECT
+            s.id, s.state, s.last_updated,
+            c.name as client_name, c.asn as client_asn
+        FROM bgp_sessions s
+        JOIN clients c ON s.client_id = c.id
+    '''
+    return db_core.conn.execute(query).fetchall()
+
 def create_client_bgp_config(db_core: BIC_DB, client: dict):
     """Generates a BGP session config for our server and returns it as a string."""
     if not client.get("asn"):

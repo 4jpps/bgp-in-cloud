@@ -39,24 +39,35 @@ class ProvisionClientScreen(Screen):
     def add_assignment_row(self):
         self.assignment_count += 1
         wrapper = self.query_one("#assignments-wrapper")
-        pool_options = [(pool['name'], pool['id']) for pool in self.ip_pools]
+        pool_options = [(pool.get('description', pool['name']), pool['id']) for pool in self.ip_pools]
         
         assignment_container = Horizontal(id=f"assign_row_{self.assignment_count}")
         with assignment_container:
             yield Select(pool_options, id=f"pool_{self.assignment_count}")
             yield Select([("Single IP", "static"), ("Subnet", "subnet")], id=f"type_{self.assignment_count}")
-            yield Input(placeholder="Prefix Len", id=f"prefix_{self.assignment_count}", classes="hidden")
+            yield Input(placeholder="Prefix Len (e.g. 29 for IPv4, 64 for IPv6)", id=f"prefix_{self.assignment_count}", classes="hidden")
         
         wrapper.mount(assignment_container)
         # A bit of a hack to get the select widgets to update their display
-        self.query(Select)[-1].refr
+        self.query(Select)[-1].refresh()
         self.query(Select)[-2].refresh()
 
     def on_select_changed(self, event: Select.Changed) -> None:
         if event.select.id.startswith("type_"):
             row_num = event.select.id.split('_')[1]
             prefix_input = self.query_one(f"#prefix_{row_num}", Input)
-            prefix_input.display = event.value == "subnet"
+            if event.value == "static":
+                prefix_input.display = False
+            else:
+                prefix_input.display = True
+                # Update placeholder based on pool family
+                pool_select = self.query_one(f"#pool_{row_num}", Select)
+                pool_id = pool_select.value
+                pool = next((p for p in self.ip_pools if p['id'] == pool_id), None)
+                if pool and ':' in pool['cidr']:
+                    prefix_input.placeholder = "Prefix Len (e.g. 64 or 56 for IPv6)"
+                else:
+                    prefix_input.placeholder = "Prefix Len (e.g. 29 or 27 for IPv4)"
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "add_assignment":

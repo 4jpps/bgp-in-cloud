@@ -20,3 +20,5 @@ All notable changes to this project will be documented in this file.
 
 ### Fixed
 - TUI widget ID generation to use valid identifiers, preventing startup crashes.
+- TUI menu navigation by adding button press handlers for menu items.
+- Web UI template error by creating missing `generic_menu.html` template.

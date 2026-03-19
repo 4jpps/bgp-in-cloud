@@ -35,7 +35,7 @@ echo "✅ Core dependencies installed."
 WG_PORT=51820 # Default WireGuard Port
 echo "
 ▶️ [3/5] Checking firewall status..."
-if ufw status | grep -q "Status: active"; then
+if command -v ufw &> /dev/null && ufw status | grep -q "Status: active"; then
     echo "🔥 UFW firewall is active. Please ensure the following ports are open:"
     echo "   - Your SSH port (e.g., 22/tcp)"
     echo "   - WireGuard port: $WG_PORT/udp"

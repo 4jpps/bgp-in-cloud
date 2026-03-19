@@ -1,0 +1,64 @@
+/* Basic styling for the BIC IPAM TUI */
+
+Screen {
+    align: center middle;
+}
+
+#main-menu-container {
+    width: 80%;
+    max-width: 80;
+    height: auto;
+    border: round white;
+    padding: 1 2;
+}
+
+#menu-title {
+    width: 100%;
+    text-align: center;
+    margin-bottom: 1;
+}
+
+#menu-container {
+    width: 100%;
+}
+
+Button {
+    width: 100%;
+    margin-bottom: 1;
+}
+
+#back-button {
+    margin-top: 1;
+}
+
+#copyright {
+    width: 100%;
+    text-align: center;
+    color: $text-muted;
+    margin-top: 1;
+}
+
+/* Generic List Screen */
+DataTable {
+    margin: 1 0;
+    height: 1fr;
+}
+
+#action-buttons-container {
+    height: auto;
+    align: center middle;
+    padding-top: 1;
+}
+
+/* Generic Form Screen */
+#form-container {
+    width: 80%;
+    max-width: 80;
+    height: auto;
+    border: round white;
+    padding: 1 2;
+}
+
+Input {
+    margin-bottom: 1;
+}

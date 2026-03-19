@@ -6,6 +6,14 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0526] - 2026-03-19
+
+### Added
+- **Composite Keys for IP Pools:** IPv4 and IPv6 pools can now share the same name. Uniqueness is now enforced on the combination of pool name and address family.
+
+### Changed
+- The database schema for `ip_pools` has been updated to version 2, including a safe data migration path.
+
 ## [2026.03.19.0519] - 2026-03-19
 
 ### Fixed

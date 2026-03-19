@@ -23,60 +23,89 @@ class BIC_DB:
         return cursor
 
     def initialize_schema(self):
-        """Creates the initial core tables required by the system."""
-        self.create_table_if_not_exists('settings', [
-            'key TEXT PRIMARY KEY',
-            'value TEXT'
-        ])
-        self.create_table_if_not_exists('clients', [
-            'id INTEGER PRIMARY KEY AUTOINCREMENT',
-            'name TEXT UNIQUE NOT NULL',
-            'email TEXT',
-            'asn INTEGER',
-            'allow_smtp BOOLEAN DEFAULT 0 NOT NULL'
-        ])
-        self.create_table_if_not_exists('wireguard_peers', [
-            'id INTEGER PRIMARY KEY AUTOINCREMENT',
-            'client_id INTEGER',
-            'name TEXT NOT NULL',
-            'public_key TEXT NOT NULL UNIQUE',
-            'preshared_key TEXT',
-            'endpoint TEXT',
-            'allowed_ips TEXT',
-            'interface_id INTEGER NOT NULL',
-            'FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE',
-            'FOREIGN KEY(interface_id) REFERENCES wireguard_interfaces(id) ON DELETE CASCADE'
-        ])
+        """Creates the initial core tables and handles schema migrations."""
+        cursor = self.conn.cursor()
+        cursor.execute("PRAGMA user_version")
+        user_version = cursor.fetchone()[0]
 
-        self.create_table_if_not_exists('ip_subnets', [
-            'id INTEGER PRIMARY KEY AUTOINCREMENT',
-            'pool_id INTEGER NOT NULL',
-            'client_id INTEGER',
-            'subnet TEXT NOT NULL UNIQUE',
-            'description TEXT',
-            'FOREIGN KEY(pool_id) REFERENCES ip_pools(id) ON DELETE CASCADE',
-            'FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE',
-        ])
+        if user_version < 1:
+            # Version 1: Initial Schema
+            self.create_table_if_not_exists('settings', [
+                'key TEXT PRIMARY KEY',
+                'value TEXT'
+            ])
+            self.create_table_if_not_exists('clients', [
+                'id INTEGER PRIMARY KEY AUTOINCREMENT',
+                'name TEXT UNIQUE NOT NULL',
+                'email TEXT',
+                'asn INTEGER',
+                'allow_smtp BOOLEAN DEFAULT 0 NOT NULL'
+            ])
+            self.create_table_if_not_exists('wireguard_peers', [
+                'id INTEGER PRIMARY KEY AUTOINCREMENT',
+                'client_id INTEGER',
+                'name TEXT NOT NULL',
+                'public_key TEXT NOT NULL UNIQUE',
+                'preshared_key TEXT',
+                'endpoint TEXT',
+                'allowed_ips TEXT',
+                'interface_id INTEGER NOT NULL',
+                'FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE',
+                'FOREIGN KEY(interface_id) REFERENCES wireguard_interfaces(id) ON DELETE CASCADE'
+            ])
 
-        self.create_table_if_not_exists('email_log', [
-            'id INTEGER PRIMARY KEY AUTOINCREMENT',
-            'client_id INTEGER',
-            'timestamp DATETIME DEFAULT CURRENT_TIMESTAMP',
-            'subject TEXT',
-            'body TEXT',
-            'attachment_name TEXT',
-            'attachment_content TEXT',
-            'FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE',
-        ])
+            self.create_table_if_not_exists('ip_subnets', [
+                'id INTEGER PRIMARY KEY AUTOINCREMENT',
+                'pool_id INTEGER NOT NULL',
+                'client_id INTEGER',
+                'subnet TEXT NOT NULL UNIQUE',
+                'description TEXT',
+                'FOREIGN KEY(pool_id) REFERENCES ip_pools(id) ON DELETE CASCADE',
+                'FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE',
+            ])
 
-        self.create_table_if_not_exists('ip_pools', [
-            'id INTEGER PRIMARY KEY AUTOINCREMENT',
-            'name TEXT UNIQUE NOT NULL',
-            'cidr TEXT UNIQUE NOT NULL',
-            'description TEXT'
-        ])
+            self.create_table_if_not_exists('email_log', [
+                'id INTEGER PRIMARY KEY AUTOINCREMENT',
+                'client_id INTEGER',
+                'timestamp DATETIME DEFAULT CURRENT_TIMESTAMP',
+                'subject TEXT',
+                'body TEXT',
+                'attachment_name TEXT',
+                'attachment_content TEXT',
+                'FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE',
+            ])
 
-        self.insert_or_replace('settings', {'key': 'bgp_local_asn', 'value': '401575'})
+            self.create_table_if_not_exists('ip_pools', [
+                'id INTEGER PRIMARY KEY AUTOINCREMENT',
+                'name TEXT UNIQUE NOT NULL',
+                'cidr TEXT UNIQUE NOT NULL',
+                'description TEXT'
+            ])
+
+            self.insert_or_replace('settings', {'key': 'bgp_local_asn', 'value': '401575'})
+            self.conn.execute("PRAGMA user_version = 1")
+            self.conn.commit()
+            user_version = 1 # Update for the next migration step
+
+        if user_version < 2:
+            # Version 2: Add afi to ip_pools and make name/afi unique
+            self.conn.execute("PRAGMA foreign_keys=off")
+            self.conn.execute("BEGIN TRANSACTION")
+            try:
+                self.conn.execute("CREATE TABLE ip_pools_new (id INTEGER PRIMARY KEY, name TEXT NOT NULL, afi TEXT NOT NULL, cidr TEXT NOT NULL, description TEXT, UNIQUE(name, afi))")
+                self.conn.execute("INSERT INTO ip_pools_new (id, name, afi, cidr, description) SELECT id, name, 'ipv4', cidr, description FROM ip_pools")
+                self.conn.execute("DROP TABLE ip_pools")
+                self.conn.execute("ALTER TABLE ip_pools_new RENAME TO ip_pools")
+                self.conn.execute("COMMIT")
+            except:
+                self.conn.execute("ROLLBACK")
+                raise
+            finally:
+                self.conn.execute("PRAGMA foreign_keys=on")
+            
+            self.conn.execute("PRAGMA user_version = 2")
+            self.conn.commit()
+            user_version = 2
 
     def create_table_if_not_exists(self, table_name, columns):
         query = f"CREATE TABLE IF NOT EXISTS {table_name} ({ ', '.join(columns)})"

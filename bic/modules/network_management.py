@@ -81,12 +81,14 @@ def get_next_available_ip_in_pool(db_core: BIC_DB, pool_id: int):
 def add_pool(db_core: BIC_DB, name: str, cidr: str, description: str):
     """Adds a new IP pool to the database after validation."""
     try:
-        ipaddress.ip_network(cidr)
+        net = ipaddress.ip_network(cidr)
+        afi = f"ipv{net.version}"
     except ValueError:
         return {"success": False, "message": "Invalid CIDR notation."}
 
     db_core.insert('ip_pools', {
         'name': name,
+        'afi': afi,
         'cidr': cidr,
         'description': description
     })

@@ -6,6 +6,11 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0727] - 2026-03-19
+
+### Fixed
+- **TUI:** Corrected a series of critical bugs that rendered the Client Management, Network Management, and System Settings menus inoperable. The TUI is now fully functional.
+
 ## [2026.03.19.0722] - 2026-03-19
 
 ### Changed

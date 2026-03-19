@@ -6,6 +6,7 @@ from textual.containers import VerticalScroll
 
 from bic.core import BIC_DB
 from bic.menus.clients.add import AddClientScreen
+from bic.menus.clients.edit import EditClientScreen
 
 class ClientSelectScreen(Screen):
     """Screen to select a client and an action to perform."""
@@ -46,7 +47,7 @@ class ClientSelectScreen(Screen):
         else:
             for client in clients:
                 vs.mount(Static(f"[bold]{client['name']}[/bold] (ID: {client['id']})"))
-                vs.mount(Button("Edit Details", id=f"edit_{client['id']}", disabled=True)) # Disabled for now
+                vs.mount(Button("Edit Details", id=f"edit_{client['id']}"))
                 vs.mount(Button("Manage BGP Session", id=f"bgp_{client['id']}", disabled=True))
                 vs.mount(Button("Delete Client", id=f"delete_{client['id']}"))
                 vs.mount(Static("---"))
@@ -55,6 +56,9 @@ class ClientSelectScreen(Screen):
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "add_client":
             self.app.push_screen(AddClientScreen(self.db_core))
+        elif event.button.id and event.button.id.startswith("edit_"):
+            client_id = int(event.button.id.split("_")[1])
+            self.app.push_screen(EditClientScreen(self.db_core, client_id))
         elif event.button.id and event.button.id.startswith("delete_"):
             client_id = int(event.button.id.split("_")[1])
             # In a real app, you would ask for confirmation here

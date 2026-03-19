@@ -12,6 +12,8 @@ from bic.modules import statistics_management, system_management
 from bic.__version__ import __version__
 from bic.menus.network.pools.edit import PoolSelectScreen
 from bic.menus.clients.management import ClientSelectScreen
+from bic.menus.network.pools.management import PoolManagementScreen
+from bic.menus.system.settings import SettingsScreen
 
 MENU_STACK = [MENU_STRUCTURE]
 PATH_TITLES = ["Main Menu"]
@@ -112,8 +114,8 @@ class TuiApp(App):
                 MENU_STACK.append(selected_item['handler'])
                 PATH_TITLES.append(original_item_label)
                 self.update_menu_view()
-            elif original_item_label == 'Client Management':
-                self.push_screen(ClientSelectScreen(self.db_core))
+            elif original_item_label == 'System Settings':
+                self.push_screen(SettingsScreen(self.db_core))
             elif selected_item['handler'] == 'bic.menus.system.statistics':
                 self.push_screen(SystemDashboardScreen(self.db_core))
 

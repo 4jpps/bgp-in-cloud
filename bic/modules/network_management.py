@@ -86,6 +86,10 @@ def add_pool(db_core: BIC_DB, name: str, cidr: str, description: str):
     except ValueError:
         return {"success": False, "message": "Invalid CIDR notation."}
 
+    # If no description is provided, create a default one
+    if not description:
+        description = f"{name} {afi.upper()} Pool"
+
     db_core.insert('ip_pools', {
         'name': name,
         'afi': afi,
@@ -95,6 +99,11 @@ def add_pool(db_core: BIC_DB, name: str, cidr: str, description: str):
     # After adding a public pool, BIRD config should be updated
     update_bird_export_config(db_core)
     return {"success": True, "message": f"IP Pool '{name}' ({cidr}) created successfully."}
+
+def update_pool_description(db_core: BIC_DB, pool_id: int, new_description: str):
+    """Updates the description of an existing IP pool."""
+    db_core.update('ip_pools', pool_id, {'description': new_description})
+    return {"success": True, "message": f"Successfully updated description for pool ID {pool_id}."}
 
 def delete_pool(db_core: BIC_DB, pool_id: int):
     """Deletes an IP pool after checking for active allocations."""

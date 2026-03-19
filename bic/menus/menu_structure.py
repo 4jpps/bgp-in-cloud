@@ -86,6 +86,10 @@ MENU_STRUCTURE = {
                             {"label": "Description", "name": "description", "type": "text", "required": False}
                         ]
                     },
+                    "Edit Pool Description": {
+                        "type": "action",
+                        "handler": "bic.menus.network.pools.edit"
+                    },
                     "Delete Pool": {
                         "type": "action",
                         "handler": "bic.menus.network.pools.delete",

@@ -6,6 +6,14 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0533] - 2026-03-19
+
+### Added
+- **Edit IP Pool:** You can now edit the description of an existing IP pool.
+
+### Changed
+- When creating a new IP pool, if no description is provided, a sensible default will now be automatically generated (e.g., "AMPRNet IPv6 Pool").
+
 ## [2026.03.19.0526] - 2026-03-19
 
 ### Added

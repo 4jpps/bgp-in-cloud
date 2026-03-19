@@ -3,10 +3,11 @@ import os
 
 from textual.app import App, ComposeResult
 from textual.screen import Screen
-from textual.containers import Vertical
+from textual.containers import Vertical, Horizontal
 from textual.widgets import Button, Header, Static
 
 from bic.core import BIC_DB
+from bic.modules import statistics_management
 from bic.ui import main_menu as menu_structure
 from bic.ui.schema import UIMenu, UIMenuItem, UIAction, UIView
 from bic.tui.generic_screens import GenericListScreen, GenericFormScreen
@@ -33,14 +34,36 @@ class MainMenuScreen(Screen):
     def compose(self) -> ComposeResult:
         year = datetime.date.today().year
         yield Header(show_clock=True)
-        with Vertical(id="main-menu-container"):
-            yield Static(self.current_menu.name, id="menu-title")
-            with Vertical(id="menu-container"):
-                for item in self.current_menu.items:
-                    yield Button(item.name, id=sanitize_for_id(item.path))
-            yield Button("Back", id="back-button", variant="default", disabled=True)
+        with Horizontal(id="main-container"):
+            with Vertical(id="main-menu-container"):
+                yield Static(self.current_menu.name, id="menu-title")
+                with Vertical(id="menu-container"):
+                    for item in self.current_menu.items:
+                        yield Button(item.name, id=sanitize_for_id(item.path))
+                yield Button("Back", id="back-button", variant="default", disabled=True)
+            with Vertical(id="stats-pane"):
+                yield Static("📊 Statistics", classes="title")
+                yield Static(id="stats-display")
         with Vertical(id="footer-container"):
             yield Static(f"Copyright {year} Jeff Parrish PC Services - v{__version__}", id="copyright")
+
+    def on_mount(self) -> None:
+        self.update_stats()
+        self.set_interval(30, self.update_stats)
+
+    def update_stats(self) -> None:
+        stats = statistics_management.gather_all_statistics(self.db_core)
+        stats_text = (
+            f"[bold]Clients:[/bold] {stats['total_clients']}\n"
+            f"[bold]IP Pools:[/bold] {stats['total_pools']}\n"
+            f"[bold]Allocated IPs:[/bold] {stats['total_allocations']}\n"
+            f"[bold]Allocated Subnets:[/bold] {stats['total_subnets']}\n\n"
+            f"[bold]Pool Usage:[/bold]\n"
+        )
+        for pool_stat in stats['pool_stats']:
+            stats_text += f"  - {pool_stat['name']}: {pool_stat['usage']:.2f}%\n"
+        
+        self.query_one("#stats-display").update(stats_text)
 
     def on_button_pressed(self, event: Button.Pressed) -> None:
         if event.button.id == "back-button":
@@ -60,7 +83,6 @@ class MainMenuScreen(Screen):
             if isinstance(selected_menu_item.item, UIMenu):
                 self.menu_stack.append(selected_menu_item.item)
                 self.rebuild_menu()
-            # Special case for the complex provisioning workflow
             elif selected_menu_item.path == "/clients/provision/new":
                 self.app.push_screen(ProvisionClientScreen(self.db_core))
             elif isinstance(selected_menu_item.item, UIAction):

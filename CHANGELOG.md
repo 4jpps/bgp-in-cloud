@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026.03.19.0530] - 2026-03-19
+
+### Fixed
+- Made the TUI dashboard more resilient to prevent a `KeyError` crash if statistics data is missing. It will now display "N/A" instead of crashing.
+
 ## [2026.03.19.0519] - 2026-03-19
 
 ### Fixed

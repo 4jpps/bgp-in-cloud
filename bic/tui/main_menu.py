@@ -128,18 +128,22 @@ def generate_stats_table(db_core: BIC_DB) -> Table:
     table.add_column("Metric", justify="right", style="bold")
     table.add_column("Value")
 
+    system_stats = stats.get('system', {})
+    network_stats = stats.get('network', {})
+    db_stats = stats.get('database', {})
+
     # System Stats
-    table.add_row("CPU Load", f"{stats['system']['cpu_load']}% / {stats['system']['cpu_cores']} cores")
-    table.add_row("Memory", f"{stats['system']['mem_percent']}% used")
-    table.add_row("Disk Usage", f"{stats['system']['disk_percent']}% used")
-    table.add_row("WAN Traffic", f"Sent: {stats['network']['wan']['bytes_sent']} | Recv: {stats['network']['wan']['bytes_recv']}")
+    table.add_row("CPU Load", f"{system_stats.get('cpu_load', 'N/A')}% / {system_stats.get('cpu_cores', 'N/A')} cores")
+    table.add_row("Memory", f"{system_stats.get('mem_percent', 'N/A')}% used")
+    table.add_row("Disk Usage", f"{system_stats.get('disk_percent', 'N/A')}% used")
+    table.add_row("WAN Traffic", f"Sent: {network_stats.get('bytes_sent', 'N/A')} | Recv: {network_stats.get('bytes_recv', 'N/A')}")
 
     # Database Stats
     table.add_section()
-    table.add_row("DB Clients", str(stats['database']['clients']))
-    table.add_row("DB IP Pools", str(stats['database']['ip_pools']))
-    table.add_row("DB Allocations", str(stats['database']['ip_allocations']))
-    table.add_row("DB Subnets", str(stats['database']['ip_subnets']))
+    table.add_row("DB Clients", str(db_stats.get('clients', 'N/A')))
+    table.add_row("DB IP Pools", str(db_stats.get('ip_pools', 'N/A')))
+    table.add_row("DB Allocations", str(db_stats.get('ip_allocations', 'N/A')))
+    table.add_row("DB Subnets", str(db_stats.get('ip_subnets', 'N/A')))
 
     return table
 

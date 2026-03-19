@@ -1,79 +1,54 @@
-import subprocess
-import os
 import psutil
 import shutil
-from rich.console import Console
+import subprocess
+import os
 from bic.core import BIC_DB
 
-CONSOLE = Console()
-
-def get_wan_interface():
+def _get_wan_interface():
     """Determines the primary public-facing network interface."""
     try:
-        # Get the route to a public IP
         route_cmd = "ip route get 8.8.8.8"
         proc = subprocess.run(route_cmd, shell=True, check=True, capture_output=True, text=True)
-        # The interface name is the 5th word in the output
         return proc.stdout.split()[4]
-    except (subprocess.CalledProcessError, IndexError):
+    except Exception:
         return None
 
-def get_network_stats(interface: str):
-    """Gets network statistics for a given interface."""
-    if not interface or not os.path.exists(f"/sys/class/net/{interface}"):
-        return {"rx_bytes": "N/A", "tx_bytes": "N/A"}
-    
-    try:
-        with open(f"/sys/class/net/{interface}/statistics/rx_bytes", "r") as f:
-            rx_bytes = int(f.read().strip())
-        with open(f"/sys/class/net/{interface}/statistics/tx_bytes", "r") as f:
-            tx_bytes = int(f.read().strip())
-        return {"rx_bytes": rx_bytes, "tx_bytes": tx_bytes}
-    except (IOError, ValueError):
-        return {"rx_bytes": "Error", "tx_bytes": "Error"}
-
-def get_system_stats():
-    """Gathers general system statistics like load, memory, and disk usage."""
-    try:
-        cpu_percent = psutil.cpu_percent(interval=1)
-        cpu_cores = psutil.cpu_count(logical=False) # Physical cores
-        mem_info = psutil.virtual_memory()
-        disk_info = shutil.disk_usage("/")
-        return {
-            "cpu_load": cpu_percent,
-            "cpu_cores": cpu_cores,
-            "mem_percent": mem_info.percent,
-            "disk_percent": disk_info.percent,
-        }
-    except Exception:
-        return {"load_avg": "N/A", "memory_percent": "N/A", "disk_percent": "N/A"}
-
-def get_ipam_stats(db_core: BIC_DB):
-    """Gathers statistics from the IPAM database."""
-    try:
-        num_clients = db_core.get_connection().execute("SELECT COUNT(*) FROM clients").fetchone()[0]
-        num_pools = db_core.get_connection().execute("SELECT COUNT(*) FROM ip_pools").fetchone()[0]
-        num_allocations = db_core.get_connection().execute("SELECT COUNT(*) FROM ip_allocations").fetchone()[0]
-        num_subnets = db_core.get_connection().execute("SELECT COUNT(*) FROM ip_subnets").fetchone()[0]
-        return {
-            "clients": num_clients,
-            "pools": num_pools,
-            "single_ips_allocated": num_allocations,
-            "subnets_allocated": num_subnets
-        }
-    except Exception:
-        return {"clients": "N/A", "pools": "N/A", "single_ips_allocated": "N/A", "subnets_allocated": "N/A"}
-
-def gather_all_statistics(db_core: BIC_DB):
-    """A master function to collect and return all system statistics."""
-    wan_interface = get_wan_interface()
-    network_stats = get_network_stats(wan_interface)
-    system_stats = get_system_stats()
-    ipam_stats = get_ipam_stats(db_core)
-
-    return {
-        "wan_interface": wan_interface or "Not Found",
-        "network": network_stats,
-        "system": system_stats,
-        "ipam": ipam_stats,
+def gather_all_statistics(db_core: BIC_DB) -> dict:
+    """A master function to collect and return all system statistics robustly."""
+    stats = {
+        'system': {'cpu_load': 'N/A', 'cpu_cores': 'N/A', 'mem_percent': 'N/A', 'disk_percent': 'N/A'},
+        'network': {'wan': {'bytes_sent': 'N/A', 'bytes_recv': 'N/A'}},
+        'database': {'clients': 'N/A', 'ip_pools': 'N/A', 'ip_allocations': 'N/A', 'ip_subnets': 'N/A'}
     }
+
+    # System Stats
+    try:
+        stats['system']['cpu_load'] = psutil.cpu_percent(interval=0.5)
+        stats['system']['cpu_cores'] = psutil.cpu_count(logical=False)
+        stats['system']['mem_percent'] = psutil.virtual_memory().percent
+        stats['system']['disk_percent'] = shutil.disk_usage("/").percent
+    except Exception:
+        pass # Defaults will be used
+
+    # Network Stats
+    try:
+        wan_interface = _get_wan_interface()
+        if wan_interface and os.path.exists(f"/sys/class/net/{wan_interface}"):
+            net_io = psutil.net_io_counters(pernic=True).get(wan_interface)
+            if net_io:
+                stats['network']['wan']['bytes_sent'] = f"{net_io.bytes_sent / 1e9:.2f} GB"
+                stats['network']['wan']['bytes_recv'] = f"{net_io.bytes_recv / 1e9:.2f} GB"
+    except Exception:
+        pass # Defaults will be used
+
+    # Database Stats
+    try:
+        conn = db_core.get_connection()
+        stats['database']['clients'] = conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
+        stats['database']['ip_pools'] = conn.execute("SELECT COUNT(*) FROM ip_pools").fetchone()[0]
+        stats['database']['ip_allocations'] = conn.execute("SELECT COUNT(*) FROM ip_allocations").fetchone()[0]
+        stats['database']['ip_subnets'] = conn.execute("SELECT COUNT(*) FROM ip_subnets").fetchone()[0]
+    except Exception:
+        pass # Defaults will be used
+
+    return stats

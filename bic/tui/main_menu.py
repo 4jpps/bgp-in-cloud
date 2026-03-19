@@ -43,7 +43,19 @@ def run(db_core: BIC_DB):
             choices.append("Back")
         choices.append("Quit")
 
-        chosen_item = Prompt.ask("\nChoose an option", choices=choices, default="Back")
+        # Get user input
+        chosen_item_raw = Prompt.ask("\nChoose an option", choices=choices, default="Back")
+
+        # Find the actual menu item with a case-insensitive search
+        chosen_item = ""
+        for key in choices:
+            if key.lower() == chosen_item_raw.lower():
+                chosen_item = key
+                break
+
+        if not chosen_item:
+            # If no match was found (e.g., user typed something random)
+            continue
 
         if chosen_item == "Quit":
             break

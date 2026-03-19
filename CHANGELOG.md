@@ -6,6 +6,12 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0446] - 2026-03-19
+
+### Fixed
+- **Unified Statistics:** Refactored the `statistics_management` module to be the single, robust source of all system metrics. The main TUI dashboard now correctly displays all system and network statistics.
+- **Case-Insensitive Menu:** The TUI menu now correctly accepts typed commands in a case-insensitive manner.
+
 ## [2026.03.19.0434] - 2026-03-19
 
 ### Added

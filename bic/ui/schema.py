@@ -5,7 +5,7 @@ from textual.screen import Screen
 @dataclass
 class FormField:
     name: str
-    label: str
+    label: Optional[str] = None
     type: str = "text"
     required: bool = False
     default: Any = None

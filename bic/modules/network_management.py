@@ -2,6 +2,7 @@ import ipaddress
 import subprocess
 from rich.console import Console
 from bic.core import BIC_DB
+from bic.modules import client_management, wireguard_management, system_management
 
 def get_pool_usage(db_core: BIC_DB, pool_id: int):
     """Calculates the usage percentage of a given IP pool."""
@@ -21,28 +22,7 @@ def get_pool_usage(db_core: BIC_DB, pool_id: int):
     except Exception as e:
         print(f"Error calculating usage for pool {pool_id}: {e}")
         return {"name": pool.get('name', 'Unknown'), "usage": 0}
-from bic.modules import client_management, wireguard_management
-
 console = Console()
-
-def get_pool_usage(db_core: BIC_DB, pool_id: int):
-    """Calculates the usage percentage of a given IP pool."""
-    pool = db_core.find_one('ip_pools', {'id': pool_id})
-    if not pool:
-        return {"name": "Unknown", "usage": 0}
-
-    try:
-        network = ipaddress.ip_network(pool['cidr'])
-        total_ips = network.num_addresses
-        allocated_ips = db_core.conn.execute(
-            "SELECT COUNT(*) FROM ip_allocations WHERE pool_id = ?", (pool_id,)
-        ).fetchone()[0]
-        
-        usage = (allocated_ips / total_ips) * 100 if total_ips > 0 else 0
-        return {"name": pool['name'], "usage": usage}
-    except Exception as e:
-        print(f"Error calculating usage for pool {pool_id}: {e}")
-        return {"name": pool.get('name', 'Unknown'), "usage": 0}
 
 # --- Constants for BIRD file paths ---
 BIRD_PREFIXES_FILE_V4 = "/etc/bird/bic_prefixes_v4.conf"
@@ -126,6 +106,73 @@ def swap_pool_prefix(db_core: BIC_DB, pool_id: int, new_cidr: str):
 
     console.print(f"[bold green]✅ Pool swap completed successfully.[/bold green]")
     return {"success": True, "message": f"Successfully swapped prefix for pool '{pool['name']}'."}
+
+def get_next_available_ip_in_pool(db_core: BIC_DB, pool_id: int):
+    """
+    Finds the next available IP address in a pool and creates a preliminary allocation.
+    """
+    pool = db_core.find_one('ip_pools', {'id': pool_id})
+    if not pool:
+        return None, None
+
+    network = ipaddress.ip_network(pool['cidr'])
+    allocated_ips = {
+        ipaddress.ip_address(row['ip_address'])
+        for row in db_core.find_all_by('ip_allocations', {'pool_id': pool_id})
+    }
+
+    for ip in network.hosts():
+        if ip not in allocated_ips:
+            # Found a free IP, create an allocation
+            new_alloc = {
+                'ip_address': str(ip),
+                'pool_id': pool_id,
+                'client_id': None, # Not assigned to a client yet
+                'description': 'Reserved by system'
+            }
+            alloc_id = db_core.insert('ip_allocations', new_alloc)
+            return str(ip), alloc_id
+
+    return None, None
+
+def find_and_allocate_subnet(db_core: BIC_DB, pool_id: int, prefix_len: int):
+    """
+    Finds and allocates the next available subnet of a given prefix length within a pool.
+    """
+    pool = db_core.find_one('ip_pools', {'id': pool_id})
+    if not pool:
+        return None, None
+
+    parent_network = ipaddress.ip_network(pool['cidr'])
+    if prefix_len <= parent_network.prefixlen:
+        return None, None # Requested subnet is larger than or equal to the pool
+
+    # Get all existing subnets in this pool
+    existing_subnets = [
+        ipaddress.ip_network(s['subnet'])
+        for s in db_core.find_all_by('ip_subnets', {'pool_id': pool_id})
+    ]
+
+    # Iterate through possible subnets
+    for subnet in parent_network.subnets(new_prefix=prefix_len):
+        is_available = True
+        for existing in existing_subnets:
+            if subnet.overlaps(existing):
+                is_available = False
+                break
+        
+        if is_available:
+            # Found an available subnet, allocate it
+            new_subnet_data = {
+                'subnet': str(subnet),
+                'pool_id': pool_id,
+                'client_id': None,
+                'description': f'Allocated subnet from pool {pool["name"]}'
+            }
+            subnet_id = db_core.insert('ip_subnets', new_subnet_data)
+            return str(subnet), subnet_id
+
+    return None, None
 
 def find_and_allocate_subnet_from_form(db_core: BIC_DB, pool_id: int, prefix_len: int, client_id: int = None):
     """Wrapper for UI form to find and allocate a subnet."""

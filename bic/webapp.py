@@ -1,5 +1,12 @@
 import inspect
+from datetime import datetime
 from fastapi import FastAPI, Request, Depends, HTTPException
+
+def filter_strftime(string, fmt):
+    if string == "now":
+        return datetime.utcnow().strftime(fmt)
+    # We can add more logic here to parse date strings if needed
+    return string
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 from fastapi.responses import HTMLResponse, RedirectResponse
@@ -14,8 +21,9 @@ from bic.__version__ import __version__
 # --- App and Template Setup ---
 app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent
-app.mount("/static", StaticFiles(directory=str(BASE_DIR / "static")), name="static")
-templates = Jinja2Templates(directory=str(BASE_DIR / "templates"))
+app.mount("/static", StaticFiles(directory=str(BASE_DIR.parent / "static")), name="static")
+templates = Jinja2Templates(directory=str(BASE_DIR.parent / "templates"))
+templates.env.filters['strftime'] = filter_strftime
 
 # --- Database Dependency ---
 def get_db():
@@ -53,15 +61,15 @@ async def render_page(request: Request, path: str, db: BIC_DB = Depends(get_db))
     ui_item = find_ui_item_by_path(path)
     if not ui_item or not ui_item.item:
         raise HTTPException(status_code=404, detail="Page not found")
-    
-    context = {"request": request, "settings": settings, "item": ui_item.item, "menu": menu_structure, "current_path": path, "version": __version__}
-    
+
     if isinstance(ui_item.item, UIView):
+        context = {"request": request, "settings": settings, "view": ui_item.item, "menu": menu_structure, "current_path": path, "version": __version__}
         items = ui_item.item.handler(db)
         context["items"] = items
         return templates.TemplateResponse("generic_list.html", context)
-    
+
     elif isinstance(ui_item.item, UIAction):
+        context = {"request": request, "settings": settings, "action": ui_item.item, "menu": menu_structure, "current_path": path, "version": __version__}
         data = {}
         if ui_item.item.loader:
             item_id = request.query_params.get("id")

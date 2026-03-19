@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026.03.19.0429] - 2026-03-19
+
+### Fixed
+- Rewrote the TUI main loop to be simpler and more robust, fixing a bug where menu options could not be selected.
+- Corrected a text formatting issue that was causing the time display to be garbled in the TUI header.
+
+### Changed
+- The TUI dashboard no longer attempts to be a "live" view. Instead, the statistics panel now refreshes after every user action, providing a more stable and reliable experience.
+
 ## [2026.03.19.0530] - 2026-03-19
 
 ### Fixed

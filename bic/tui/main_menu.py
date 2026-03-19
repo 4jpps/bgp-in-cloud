@@ -1,12 +1,11 @@
-import time
 import importlib
 import os
+import time
 from datetime import datetime
 
 from rich.align import Align
 from rich.console import Console
 from rich.layout import Layout
-from rich.live import Live
 from rich.panel import Panel
 from rich.prompt import Prompt
 from rich.table import Table
@@ -23,53 +22,45 @@ def run(db_core: BIC_DB):
     console = Console()
     system_management.setup_host_networking(db_core)
     
-    layout = make_layout()
-    layout["header"].update(Header(f"BGP in the Cloud - v{__version__}"))
-
     menu_stack = [MENU_STRUCTURE]
     path_titles = ["Main Menu"]
 
-    with Live(layout, screen=True, redirect_stderr=False) as live:
-        while menu_stack:
-            current_menu_level = menu_stack[-1]
-            
-            layout["side_menu"].update(generate_menu_panel(path_titles, current_menu_level))
+    while menu_stack:
+        console.clear()
+        layout = make_layout()
 
-            # Main loop for live-updating stats
-            while True:
-                layout["main_content"].update(generate_stats_table(db_core))
-                live.refresh()
-                # This is tricky; we can't block on Prompt.ask here.
-                # This example will just loop. A real implementation would need
-                # to handle input differently, perhaps with a keyboard listener in a thread.
-                # For this demonstration, we'll break to show the concept.
-                break 
+        # Update layout with current information
+        layout["header"].update(Header(f"BGP in the Cloud - v{__version__}"))
+        layout["side_menu"].update(generate_menu_panel(path_titles, menu_stack[-1]))
+        layout["main_content"].update(generate_stats_table(db_core))
 
-            # This part is now outside the live-update loop for simplicity.
-            # A real-world, more complex TUI might use threading to handle input
-            # without stopping the live updates.
-            chosen_item = Prompt.ask("\nChoose an option")
+        console.print(layout)
 
-            if chosen_item.lower() == "quit":
-                break
-            elif chosen_item.lower() == "back" and len(menu_stack) > 1:
+        # Build choices for the interactive prompt
+        current_menu_level = menu_stack[-1]
+        choices = list(current_menu_level.keys())
+        if len(menu_stack) > 1:
+            choices.append("Back")
+        choices.append("Quit")
+
+        # Get user input
+        chosen_item = Prompt.ask("\nChoose an option", choices=choices, default="Back")
+
+        if chosen_item == "Quit":
+            break
+        elif chosen_item == "Back":
+            if len(menu_stack) > 1:
                 menu_stack.pop()
                 path_titles.pop()
-                continue
+            continue
 
-            if chosen_item in current_menu_level:
-                selected_item = current_menu_level[chosen_item]
-                if selected_item['type'] == 'submenu':
-                    menu_stack.append(selected_item['handler'])
-                    path_titles.append(chosen_item)
-                elif selected_item['type'] == 'action':
-                    live.stop()
-                    run_action(db_core, selected_item['handler'], console)
-                    # After action, restart the live display
-                    live.start()
-            else:
-                # This part is tricky in a live display. A temporary message area is needed.
-                pass
+        selected_item = current_menu_level[chosen_item]
+        
+        if selected_item['type'] == 'submenu':
+            menu_stack.append(selected_item['handler'])
+            path_titles.append(chosen_item)
+        elif selected_item['type'] == 'action':
+            run_action(db_core, selected_item['handler'], console)
 
 
 def make_layout() -> Layout:
@@ -94,7 +85,7 @@ class Header:
         grid.add_column(justify="right")
         grid.add_row(
             f"[b]{self.title}[/b]",
-            datetime.now().ctime().replace(":", "[​]:[​]"),
+            datetime.now().ctime(),  # Correctly display time without formatting errors
         )
         return Panel(grid, style="white on blue")
 
@@ -102,18 +93,11 @@ class Header:
 def generate_menu_panel(path_titles: list, menu_level: dict) -> Panel:
     """Creates the menu panel for the sidebar."""
     menu_items = list(menu_level.keys())
+    # Use a simple list for menu items
     menu_text = "\n".join(f"- {item}" for item in menu_items)
-    
-    nav_options = []
-    if len(path_titles) > 1:
-        nav_options.append("Back")
-    nav_options.append("Quit")
-    nav_text = "\n".join(nav_options)
 
-    full_text = f"{menu_text}\n\n[bold cyan]{nav_text}[/bold cyan]"
-    
     return Panel(
-        Align.left(full_text, vertical="top"),
+        Align.left(menu_text, vertical="top"),
         title=" -> ".join(path_titles),
         border_style="green",
         padding=(1, 2)
@@ -124,7 +108,7 @@ def generate_stats_table(db_core: BIC_DB) -> Table:
     """Generates a table of system statistics."""
     stats = statistics_management.gather_all_statistics(db_core)
     
-    table = Table(title="Live System Statistics", border_style="cyan")
+    table = Table(title="System Statistics (Refreshed on action)", border_style="cyan")
     table.add_column("Metric", justify="right", style="bold")
     table.add_column("Value")
 

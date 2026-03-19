@@ -4,11 +4,12 @@ from textual.widgets import Header, Footer, Static, Button, DataTable
 from textual.binding import Binding
 from datetime import datetime
 import os
-import importlib
+
 
 from bic.core import BIC_DB
 from bic.menus.menu_structure import MENU_STRUCTURE
-from bic.modules import system_management, statistics_management
+from bic.menus.system.statistics import SystemDashboardScreen
+from bic.modules import statistics_management
 from bic.__version__ import __version__
 from bic.menus.network.pools.edit import PoolSelectScreen
 
@@ -69,16 +70,12 @@ class TuiApp(App):
         self.db_core = db_core
 
     def compose(self) -> ComposeResult:
-        yield Header(show_clock=True)
-        with Container(id="app-grid"):
-            with Vertical(id="menu-pane"):
-                yield Static("Main Menu", id="menu-title")
-                yield Menu()
-                yield Button("Back", id="back-button", variant="default", disabled=True)
-            yield StatsTable(self.db_core, id="stats-pane")
         year = datetime.now().year
-        yield Static(f"Copyright {year} Jeff Parrish PC Services - v{__version__}", id="version-footer")
-        yield Footer()
+        yield Header(show_clock=True)
+        yield Container(id="app-grid")
+        with Vertical(id="footer-container"):
+            yield Static(f"Copyright {year} Jeff Parrish PC Services - v{__version__}", id="version-footer")
+            yield Footer()
 
     def update_menu_view(self) -> None:
         menu_title = " -> ".join(PATH_TITLES)
@@ -108,22 +105,14 @@ class TuiApp(App):
                 self.update_menu_view()
             elif selected_item['handler'] == 'bic.menus.network.pools.edit':
                 self.push_screen(PoolSelectScreen(self.db_core))
+            elif selected_item['handler'] == 'bic.menus.system.statistics':
+                self.push_screen(SystemDashboardScreen(self.db_core))
             elif selected_item['type'] == 'action':
+                # This is for any remaining legacy actions
                 with self.suspend():
                     run_legacy_action(self.db_core, selected_item['handler'])
 
-def run_legacy_action(db_core: BIC_DB, handler_path: str):
-    from rich.console import Console
-    from rich.prompt import Prompt
-    console = Console()
-    try:
-        action_module = importlib.import_module(handler_path)
-        console.clear()
-        action_module.run(db_core)
-    except Exception as e:
-        console.print(f"[bold red]An unexpected error occurred:[/bold red] {e}")
-        console.print_exception(show_locals=True)
-        Prompt.ask("\nPress Enter to continue...")
+
 
 def run(db_core: BIC_DB):
     system_management.setup_host_networking(db_core)

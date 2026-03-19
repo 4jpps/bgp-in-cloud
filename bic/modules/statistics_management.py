@@ -40,15 +40,9 @@ def gather_all_statistics(db_core: BIC_DB) -> dict:
         print(f"Could not get memory usage: {e}", file=sys.stderr)
 
     try:
-        # This is for the user's Debian server, so we check '/'
-        stats['system']['disk_percent'] = shutil.disk_usage('/').percent
+        stats['system']['disk_percent'] = psutil.disk_usage('/').percent
     except Exception as e:
-        print(f"Could not get disk usage from '/': {e}", file=sys.stderr)
-        # Fallback for other environments (like Windows dev)
-        try:
-            stats['system']['disk_percent'] = shutil.disk_usage(os.getcwd()).percent
-        except Exception as e2:
-            print(f"Could not get disk usage from getcwd(): {e2}", file=sys.stderr)
+        print(f"Could not get disk usage: {e}", file=sys.stderr)
 
     # --- Network Stats ---
     wan_interface = _get_wan_interface()

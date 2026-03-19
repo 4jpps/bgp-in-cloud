@@ -134,7 +134,33 @@ async def provision_client_form(request: Request, db: BIC_DB = Depends(get_db)):
 async def handle_provision_client(request: Request, db: BIC_DB = Depends(get_db)):
     from bic.modules import client_management
     form_data = await request.form()
-    client_management.provision_new_client(db_core=db, **form_data)
+    form_dict = {k: v for k, v in form_data.items()}
+
+    # Extract arguments for provision_new_client
+    client_name = form_dict.get("client_name")
+    client_email = form_dict.get("client_email")
+    wg_config_name = form_dict.get("wg_config_name")
+    p2p_ipv4_pool_id = form_dict.get("p2p_ipv4_pool_id")
+    p2p_ipv6_pool_id = form_dict.get("p2p_ipv6_pool_id")
+    customer_lan_pool_id = form_dict.get("customer_lan_pool_id")
+    transit_pool_id = form_dict.get("transit_pool_id")
+
+    # Convert pool IDs to integers, handling None
+    p2p_ipv4_pool_id = int(p2p_ipv4_pool_id) if p2p_ipv4_pool_id else None
+    p2p_ipv6_pool_id = int(p2p_ipv6_pool_id) if p2p_ipv6_pool_id else None
+    customer_lan_pool_id = int(customer_lan_pool_id) if customer_lan_pool_id else None
+    transit_pool_id = int(transit_pool_id) if transit_pool_id else None
+
+    client_management.provision_new_client(
+        db_core=db, 
+        client_name=client_name,
+        client_email=client_email,
+        wg_config_name=wg_config_name,
+        p2p_ipv4_pool_id=p2p_ipv4_pool_id,
+        p2p_ipv6_pool_id=p2p_ipv6_pool_id,
+        customer_lan_pool_id=customer_lan_pool_id,
+        transit_pool_id=transit_pool_id
+    )
     return RedirectResponse(url="/page/clients/list", status_code=303)
 
 @app.get("/system/statistics", response_class=HTMLResponse)

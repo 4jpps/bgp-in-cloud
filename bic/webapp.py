@@ -25,16 +25,6 @@ def get_db():
     finally:
         db.conn.close()
 
-# --- Global Context Middleware (The Correct Way for FastAPI) ---
-@app.middleware("http")
-async def add_global_context(request: Request, call_next):
-    db = next(get_db())
-    settings = system_management.get_all_settings(db)
-    request.state.settings = settings
-    request.state.version = __version__
-    response = await call_next(request)
-    return response
-
 # --- Helper function to find schema items ---
 def find_ui_item_by_path(path: str):
     parts = path.strip("/").split("/")
@@ -52,17 +42,19 @@ def find_ui_item_by_path(path: str):
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request, db: BIC_DB = Depends(get_db)):
     from bic.modules import statistics_management
+    settings = system_management.get_all_settings(db)
     stats = statistics_management.gather_all_statistics(db)
     clients = db.find_all("clients")
-    return templates.TemplateResponse("dashboard.html", {"request": request, "stats": stats, "clients": clients, "menu": menu_structure})
+    return templates.TemplateResponse("dashboard.html", {"request": request, "settings": settings, "stats": stats, "clients": clients, "menu": menu_structure, "version": __version__})
 
 @app.get("/page/{path:path}", response_class=HTMLResponse)
 async def render_page(request: Request, path: str, db: BIC_DB = Depends(get_db)):
+    settings = system_management.get_all_settings(db)
     ui_item = find_ui_item_by_path(path)
     if not ui_item or not ui_item.item:
         raise HTTPException(status_code=404, detail="Page not found")
     
-    context = {"request": request, "item": ui_item.item, "menu": menu_structure, "current_path": path}
+    context = {"request": request, "settings": settings, "item": ui_item.item, "menu": menu_structure, "current_path": path, "version": __version__}
     
     if isinstance(ui_item.item, UIView):
         items = ui_item.item.handler(db)
@@ -99,8 +91,9 @@ async def handle_form_post(request: Request, path: str, db: BIC_DB = Depends(get
 # --- Special Case Routes ---
 @app.get("/clients/provision/new", response_class=HTMLResponse)
 async def provision_client_form(request: Request, db: BIC_DB = Depends(get_db)):
+    settings = system_management.get_all_settings(db)
     pools = db.find_all("ip_pools")
-    return templates.TemplateResponse("provision_client.html", {"request": request, "pools": pools, "menu": menu_structure, "current_path": "/clients/provision/new"})
+    return templates.TemplateResponse("provision_client.html", {"request": request, "settings": settings, "pools": pools, "menu": menu_structure, "current_path": "/clients/provision/new", "version": __version__})
 
 @app.post("/clients/provision/new", response_class=RedirectResponse)
 async def handle_provision_client(request: Request, db: BIC_DB = Depends(get_db)):
@@ -111,9 +104,10 @@ async def handle_provision_client(request: Request, db: BIC_DB = Depends(get_db)
 
 @app.get("/system/statistics", response_class=HTMLResponse)
 async def system_stats_page(request: Request, db: BIC_DB = Depends(get_db)):
+    settings = system_management.get_all_settings(db)
     from bic.modules import statistics_management
     stats = statistics_management.gather_all_statistics(db)
-    return templates.TemplateResponse("system_statistics.html", {"request": request, "stats": stats, "menu": menu_structure, "current_path": "/system/statistics"})
+    return templates.TemplateResponse("system_statistics.html", {"request": request, "settings": settings, "stats": stats, "menu": menu_structure, "current_path": "/system/statistics", "version": __version__})
 
 @app.on_event("startup")
 async def startup_event():

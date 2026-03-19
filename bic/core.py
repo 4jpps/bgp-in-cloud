@@ -222,21 +222,25 @@ class BIC_DB:
         self.conn.commit()
 
     def find_one(self, table, criteria):
+        """Finds a single record in a table based on criteria."""
         where_clause = " AND ".join([f'{key} = ?' for key in criteria.keys()])
         query = f"SELECT * FROM {table} WHERE {where_clause}"
         cursor = self._execute(query, tuple(criteria.values()))
-        return cursor.fetchone()
+        row = cursor.fetchone()
+        return dict(row) if row else None
 
     def find_all(self, table):
         cursor = self._execute(f"SELECT * FROM {table}")
-        return cursor.fetchall()
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
 
     def find_all_by(self, table, criteria):
         """Finds all records in a table based on criteria."""
         where_clause = " AND ".join([f"{key} = ?" for key in criteria.keys()])
         query = f"SELECT * FROM {table} WHERE {where_clause}"
         cursor = self._execute(query, tuple(criteria.values()))
-        return cursor.fetchall()
+        rows = cursor.fetchall()
+        return [dict(row) for row in rows]
         
     def delete(self, table_name, record_id):
         """Deletes a record from a table."""

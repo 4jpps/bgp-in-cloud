@@ -62,11 +62,12 @@ def get_full_action_path(menu_item, current_path=""):
 @app.get("/", response_class=HTMLResponse)
 async def dashboard(request: Request, db: BIC_DB = Depends(get_db)):
     stats = statistics_management.gather_all_statistics(db)
-    clients = db.find_all("clients") # Dashboard template requires this
+    clients = db.find_all("clients") 
     return templates.TemplateResponse("dashboard.html", {
-        "request": request,
-        "stats": stats,
-        "clients": clients
+        "request": request, 
+        "stats": stats, 
+        "clients": clients,
+        "menu": MENU_STRUCTURE
     })
 
 @app.get("/clients", response_class=HTMLResponse)
@@ -96,6 +97,63 @@ async def add_pool_form(request: Request):
 async def add_pool(name: str = Form(...), cidr: str = Form(...), afi: str = Form(...), description: str = Form(None), db: BIC_DB = Depends(get_db)):
     db.insert("ip_pools", {"name": name, "cidr": cidr, "afi": afi, "description": description})
     return RedirectResponse(url="/network/pools", status_code=303)
+
+import importlib
+
+# The find_action_def and generic action routes need to be defined
+def find_action_def(menu, handler_path):
+    for key, value in menu.items():
+        if value['type'] == 'action' and value.get('handler') == handler_path:
+            return value
+        elif value['type'] == 'submenu':
+            found = find_action_def(value['handler'], handler_path)
+            if found:
+                return found
+    return None
+
+@app.get("/action/{action_path:path}", response_class=HTMLResponse)
+async def get_action_form(request: Request, action_path: str, db: BIC_DB = Depends(get_db)):
+    action_def = find_action_def(MENU_STRUCTURE, action_path)
+    
+    if not action_def or 'web_form' not in action_def:
+        raise HTTPException(status_code=404, detail="Action not found or has no web form")
+
+    title = action_path.replace('bic.menus.','').replace('.', ' ').title()
+    form_fields = action_def.get('web_form', [])
+
+    for field in form_fields:
+        if field.get('type') == 'select_from_db':
+            field['options'] = db.find_all(field['source'])
+
+    return templates.TemplateResponse("generic_action_form.html", {
+        "request": request,
+        "title": title,
+        "form_fields": form_fields,
+        "action_path": action_path
+    })
+
+@app.post("/action/{action_path:path}")
+async def post_action_form(request: Request, action_path: str, db: BIC_DB = Depends(get_db)):
+    action_def = find_action_def(MENU_STRUCTURE, action_path)
+
+    if not action_def or 'web_handler' not in action_def:
+        raise HTTPException(status_code=404, detail="Action not found or has no web handler")
+
+    form_data = await request.form()
+    data = {k: v for k, v in form_data.items()}
+
+    handler_path = action_def['web_handler']
+    module_path, function_name = handler_path.rsplit('.', 1)
+
+    try:
+        module = importlib.import_module(module_path)
+        handler_function = getattr(module, function_name)
+        handler_function(db_core=db, **data)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"An error occurred: {e}")
+
+    # This is a simplification; a real app might have more complex redirect logic
+    return RedirectResponse(url="/", status_code=303)
 
 @app.get("/network/pool/{pool_id}/edit", response_class=HTMLResponse)
 async def edit_pool_form(request: Request, pool_id: int, db: BIC_DB = Depends(get_db)):

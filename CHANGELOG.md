@@ -6,6 +6,15 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0713] - 2026-03-19
+
+### Added
+- **Web UI Parity:** The web application now dynamically generates its navigation and forms from the same source as the TUI, ensuring a consistent user experience.
+- **TUI Client Management:** The TUI's "Client Management" menu is now fully functional, with a dedicated screen for listing, adding, and deleting clients.
+
+### Fixed
+- **Web App Crash:** Corrected a critical database initialization error that was preventing the web application from starting.
+
 ## [2026.03.19.0705] - 2026-03-19
 
 ### Added

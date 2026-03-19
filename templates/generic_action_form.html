@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ title }}</h1>
+    <form action="/action/{{ action_path }}" method="post">
+        {% for field in form_fields %}
+            <div>
+                <label for="{{ field.name }}">{{ field.label }}:</label>
+                {% if field.type == 'select' %}
+                    <select id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
+                        {% for option in field.options %}
+                            <option value="{{ option }}">{{ option }}</option>
+                        {% endfor %}
+                    </select>
+                {% elif field.type == 'select_from_db' %}
+                    <select id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
+                        {% for option in field.options %}
+                            <option value="{{ option.id }}">{{ option[field.display_key] }}</option>
+                        {% endfor %}
+                    </select>
+                {% elif field.type == 'hidden' %}
+                    <input type="hidden" id="{{ field.name }}" name="{{ field.name }}" value="{{ field.value if field.value else '' }}">
+                {% else %}
+                    <input type="{{ field.type }}" id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %} value="{{ field.value if field.value else '' }}">
+                {% endif %}
+            </div>
+        {% endfor %}
+        <button type="submit">Submit</button>
+    </form>
+{% endblock %}

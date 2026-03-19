@@ -10,27 +10,20 @@
     <nav class="navbar">
         <a href="/" class="nav-brand">BIC IPAM</a>
         <div class="nav-links">
-            <div class="nav-dropdown">
-                <button class="nav-button">Client Management</button>
-                <div class="dropdown-content">
-                    <a href="/clients">View Clients</a>
-                    <a href="/clients/add">Add Client</a>
-                </div>
-            </div>
-            <div class="nav-dropdown">
-                <button class="nav-button">Network Management</button>
-                <div class="dropdown-content">
-                    <a href="/network/pools">View IP Pools</a>
-                    <a href="/network/pools/add">Add IP Pool</a>
-                </div>
-            </div>
-            <div class="nav-dropdown">
-                <button class="nav-button">System</button>
-                <div class="dropdown-content">
-                    <a href="/">Dashboard</a>
-                    <a href="#">Settings</a>
-                </div>
-            </div>
+            {% for name, item in menu.items() %}
+                {% if item.type == 'submenu' %}
+                    <div class="nav-dropdown">
+                        <button class="nav-button">{{ name }}</button>
+                        <div class="dropdown-content">
+                            {% for sub_name, sub_item in item.handler.items() %}
+                                <a href="{{ sub_item.nav_path if sub_item.nav_path else '/action/' + sub_item.handler }}">{{ sub_name }}</a>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% else %}
+                    <a href="{{ item.nav_path if item.nav_path else '/action/' + item.handler }}" class="nav-button">{{ name }}</a>
+                {% endif %}
+            {% endfor %}
         </div>
     </nav>
     <div class="container">

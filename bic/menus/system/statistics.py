@@ -31,7 +31,7 @@ class SystemDashboardScreen(Screen):
         grid-columns: 1fr 2fr;
     }
     """
-    BINDINGS = [Binding("any", "app.pop_screen", "Back to Main Menu")]
+    BINDINGS = [Binding("b", "app.pop_screen", "Back")]
 
     def __init__(self, db_core: BIC_DB, *args, **kwargs):
         super().__init__(*args, **kwargs)

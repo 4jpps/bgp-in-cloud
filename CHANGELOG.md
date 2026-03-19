@@ -6,6 +6,11 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0649] - 2026-03-19
+
+### Changed
+- **UX/Accessibility:** Standardized TUI navigation. All screens now use 'b' to go back, and the main menu has a global 'b' binding to navigate up the menu tree.
+
 ## [2026.03.19.0646] - 2026-03-19
 
 ### Fixed

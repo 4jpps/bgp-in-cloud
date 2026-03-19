@@ -60,7 +60,13 @@ class Menu(Static):
 class TuiApp(App):
     TITLE = "BGP in the Cloud"
     CSS_PATH = "main_menu.css"
-    BINDINGS = [Binding("q", "quit", "Quit")]
+    BINDINGS = [Binding("q", "quit", "Quit"), Binding("b", "back", "Back")]
+
+    def action_back(self) -> None:
+        if len(MENU_STACK) > 1:
+            MENU_STACK.pop()
+            PATH_TITLES.pop()
+            self.update_menu_view()
 
     def __init__(self, db_core: BIC_DB, *args, **kwargs):
         super().__init__(*args, **kwargs)

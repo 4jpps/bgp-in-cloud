@@ -9,6 +9,8 @@ from bic.modules import network_management
 class PoolSelectScreen(Screen):
     """Screen to select a pool to edit."""
 
+    BINDINGS = [Binding("b", "app.pop_screen", "Back")]
+
     def __init__(self, db_core: BIC_DB, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.db_core = db_core
@@ -35,6 +37,8 @@ class PoolSelectScreen(Screen):
 
 class EditDescriptionScreen(Screen):
     """Screen to edit the description of a selected pool."""
+
+    BINDINGS = [Binding("b", "app.pop_screen", "Back")]
 
     def __init__(self, db_core: BIC_DB, pool_id: int, *args, **kwargs):
         super().__init__(*args, **kwargs)

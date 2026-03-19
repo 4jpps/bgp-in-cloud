@@ -108,12 +108,10 @@ def swap_pool_prefix(db_core: BIC_DB, pool_id: int, new_cidr: str):
     return {"success": True, "message": f"Successfully swapped prefix for pool '{pool['name']}'."}
 
 def get_next_available_ip_in_pool(db_core: BIC_DB, pool_id: int):
-    """
-    Finds the next available IP address in a pool and creates a preliminary allocation.
-    """
+    """Finds the next available IP address in a pool without allocating it."""
     pool = db_core.find_one('ip_pools', {'id': pool_id})
     if not pool:
-        return None, None
+        return None
 
     network = ipaddress.ip_network(pool['cidr'])
     allocated_ips = {
@@ -123,17 +121,9 @@ def get_next_available_ip_in_pool(db_core: BIC_DB, pool_id: int):
 
     for ip in network.hosts():
         if ip not in allocated_ips:
-            # Found a free IP, create an allocation
-            new_alloc = {
-                'ip_address': str(ip),
-                'pool_id': pool_id,
-                'client_id': None, # Not assigned to a client yet
-                'description': 'Reserved by system'
-            }
-            alloc_id = db_core.insert('ip_allocations', new_alloc)
-            return str(ip), alloc_id
+            return str(ip) # Return the first free IP
 
-    return None, None
+    return None
 
 def find_and_allocate_subnet(db_core: BIC_DB, pool_id: int, prefix_len: int):
     """

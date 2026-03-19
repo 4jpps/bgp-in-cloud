@@ -101,10 +101,12 @@ def provision_new_client(db_core: BIC_DB, client_name: str, client_email: str, c
             
         if assignment["type"] == "static":
             # Allocate a single IP
-            ip_address, alloc_id = network_management.get_next_available_ip_in_pool(db_core, assignment["pool_id"])
-            if ip_address and alloc_id:
-                db_core.update('ip_allocations', alloc_id, {
+            ip_address = network_management.get_next_available_ip_in_pool(db_core, assignment["pool_id"])
+            if ip_address:
+                db_core.insert('ip_allocations', {
+                    'pool_id': assignment["pool_id"],
                     'client_id': client_id,
+                    'ip_address': ip_address,
                     'description': f"Static IP for {client_name}"
                 })
         elif assignment["type"] == "subnet":

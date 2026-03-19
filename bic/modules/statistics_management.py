@@ -3,6 +3,7 @@ import shutil
 import subprocess
 import os
 import sys
+import ipaddress
 from bic.core import BIC_DB
 from bic.modules.network_management import get_pool_usage
 
@@ -41,13 +42,57 @@ def gather_all_statistics(db_core: BIC_DB) -> dict:
         print(f"Could not get database stats: {e}", file=sys.stderr)
         stats.update({'total_clients': 'N/A', 'total_pools': 'N/A', 'total_allocations': 'N/A', 'total_subnets': 'N/A'})
 
-    # --- Pool Usage Stats ---
+    # --- Pool Usage and Availability Stats ---
+    stats['pool_details'] = []
     try:
         pools = db_core.find_all('ip_pools')
-        stats['pool_stats'] = [get_pool_usage(db_core, pool['id']) for pool in pools]
+        for pool in pools:
+            pool_detail = get_pool_usage(db_core, pool['id'])
+            try:
+                network = ipaddress.ip_network(pool['cidr'])
+                total_ips = network.num_addresses
+                
+                # Count allocated single IPs
+                allocated_single_ips = db_core.conn.execute(
+                    "SELECT COUNT(*) FROM ip_allocations WHERE pool_id = ?", (pool['id'],)
+                ).fetchone()[0]
+                pool_detail['available_single_ips'] = total_ips - allocated_single_ips
+
+                # Count available subnets of common sizes
+                allocated_subnets = [
+                    ipaddress.ip_network(s['subnet'])
+                    for s in db_core.find_all_by('ip_subnets', {'pool_id': pool['id']})
+                ]
+                
+                available_subnets = {}
+                prefix_key = 'ipv6_prefix_sizes' if network.version == 6 else 'ipv4_prefix_sizes'
+                # Use some common defaults if not defined
+                common_prefixes = {
+                    'ipv4_prefix_sizes': [29, 27],
+                    'ipv6_prefix_sizes': [64, 56]
+                }
+                for prefix_len in common_prefixes.get(prefix_key, []):
+                    count = 0
+                    for subnet in network.subnets(new_prefix=prefix_len):
+                        is_available = True
+                        for existing in allocated_subnets:
+                            if subnet.overlaps(existing):
+                                is_available = False
+                                break
+                        if is_available:
+                            count += 1
+                    available_subnets[f"/{prefix_len}"] = count
+                pool_detail['available_subnets'] = available_subnets
+
+            except Exception as e:
+                print(f"Could not calculate availability for pool {pool['id']}: {e}", file=sys.stderr)
+                pool_detail['available_single_ips'] = 'N/A'
+                pool_detail['available_subnets'] = {}
+
+            stats['pool_details'].append(pool_detail)
+
     except Exception as e:
         print(f"Could not get pool stats: {e}", file=sys.stderr)
-        stats['pool_stats'] = []
 
     # --- System Stats ---
     try:

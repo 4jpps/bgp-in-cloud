@@ -1,4 +1,4 @@
-from bic.ui.schema import UIMenu, UIMenuItem, UIAction, FormField
+from bic.ui.schema import UIMenu, UIMenuItem, UIView, UIAction, FormField
 from bic.modules import system_management
 from bic.modules import statistics_management
 

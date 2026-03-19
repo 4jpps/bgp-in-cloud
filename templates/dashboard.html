@@ -1,13 +1,9 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>BIC IPAM Dashboard</title>
-    <link href="{{ url_for('static', path='/style.css') }}" rel="stylesheet">
-</head>
-<body>
-    <h1>BIC IPAM Dashboard</h1>
+{% extends "base.html" %}
+
+{% block title %}BIC IPAM Dashboard{% endblock %}
+
+{% block content %}
+    <h1>Dashboard</h1>
     <h2>System Statistics</h2>
     <table>
         <thead>
@@ -87,6 +83,4 @@
             {% endfor %}
         </tbody>
     </table>
-
-</body>
-</html>
+{% endblock %}

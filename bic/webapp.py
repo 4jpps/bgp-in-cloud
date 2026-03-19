@@ -79,87 +79,61 @@ async def get_pools(request: Request, db: BIC_DB = Depends(get_db)):
     pools = db.find_all("ip_pools")
     return templates.TemplateResponse("pools.html", {"request": request, "pools": pools})
 
+@app.get("/clients/add", response_class=HTMLResponse)
+async def add_client_form(request: Request):
+    return templates.TemplateResponse("client_form.html", {"request": request, "title": "Add Client"})
 
-@app.get("/action/{action_path:path}", response_class=HTMLResponse)
-async def get_action_form(request: Request, action_path: str, db: BIC_DB = Depends(get_db)):
-    action_def = find_action_def(action_path)
-    if not action_def or 'web_form' not in action_def:
-        raise HTTPException(status_code=404, detail="Action not found or has no web form")
+@app.post("/clients/add", response_class=RedirectResponse)
+async def add_client(name: str = Form(...), email: str = Form(None), asn: int = Form(None), allow_smtp: bool = Form(False), db: BIC_DB = Depends(get_db)):
+    db.insert("clients", {"name": name, "email": email, "asn": asn, "allow_smtp": allow_smtp})
+    return RedirectResponse(url="/clients", status_code=303)
 
-    title = action_path.split('/')[-1].replace('-', ' ').title()
-    form_fields = action_def.get('web_form', [])
+@app.get("/network/pools/add", response_class=HTMLResponse)
+async def add_pool_form(request: Request):
+    return templates.TemplateResponse("pool_form.html", {"request": request, "title": "Add IP Pool"})
 
-    # Special handling for settings forms to pre-populate values
-    if "settings" in action_path:
-        current_settings = settings_management.get_all_settings(db)
-        for field in form_fields:
-            if field['name'] in current_settings:
-                field['value'] = current_settings[field['name']]
+@app.post("/network/pools/add", response_class=RedirectResponse)
+async def add_pool(name: str = Form(...), cidr: str = Form(...), afi: str = Form(...), description: str = Form(None), db: BIC_DB = Depends(get_db)):
+    db.insert("ip_pools", {"name": name, "cidr": cidr, "afi": afi, "description": description})
+    return RedirectResponse(url="/network/pools", status_code=303)
 
-    # Dynamically populate select fields
-    for field in form_fields:
-        if field.get('type') == 'select_from_db':
-            source_data = db.find_all(field['source'])
-            field['options'] = source_data
+@app.get("/network/pool/{pool_id}/edit", response_class=HTMLResponse)
+async def edit_pool_form(request: Request, pool_id: int, db: BIC_DB = Depends(get_db)):
+    pool = db.find_one("ip_pools", {"id": pool_id})
+    if not pool:
+        raise HTTPException(status_code=404, detail="Pool not found")
+    return templates.TemplateResponse("pool_form.html", {"request": request, "title": f"Edit IP Pool: {pool['name']}", "pool": pool})
 
-    return templates.TemplateResponse("generic_action.html", {
-        "request": request,
-        "title": title,
-        "form_fields": form_fields,
-        "action_path": action_path
-    })
+@app.post("/network/pool/{pool_id}/edit", response_class=RedirectResponse)
+async def edit_pool(pool_id: int, name: str = Form(...), cidr: str = Form(...), afi: str = Form(...), description: str = Form(None), db: BIC_DB = Depends(get_db)):
+    db.update("ip_pools", pool_id, {"name": name, "cidr": cidr, "afi": afi, "description": description})
+    return RedirectResponse(url="/network/pools", status_code=303)
 
-@app.post("/action/{action_path:path}")
-async def post_action_form(request: Request, action_path: str, db: BIC_DB = Depends(get_db)):
-    action_def = find_action_def(action_path)
-    if not action_def or 'web_handler' not in action_def:
-        raise HTTPException(status_code=404, detail="Action not found or has no web handler")
+@app.get("/network/pool/{pool_id}/delete", response_class=RedirectResponse)
+async def delete_pool(pool_id: int, db: BIC_DB = Depends(get_db)):
+    db.delete("ip_pools", pool_id)
+    return RedirectResponse(url="/network/pools", status_code=303)
 
-    form_data = await request.form()
-    data = {k: v for k, v in form_data.items()}
+@app.get("/client/{client_id}/edit", response_class=HTMLResponse)
+async def edit_client_form(request: Request, client_id: int, db: BIC_DB = Depends(get_db)):
+    client = db.find_one("clients", {"id": client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    return templates.TemplateResponse("client_form.html", {"request": request, "title": f"Edit Client: {client['name']}", "client": client})
 
-    # Convert numeric types
-    for field_def in action_def.get('web_form', []):
-        if field_def['type'] == 'number' and data.get(field_def['name']):
-            data[field_def['name']] = int(data[field_def['name']])
-        if field_def['type'] == 'select_from_db' and data.get(field_def['name']):
-             data[field_def['name']] = int(data[field_def['name']])
+@app.post("/client/{client_id}/edit", response_class=RedirectResponse)
+async def edit_client(client_id: int, name: str = Form(...), email: str = Form(None), asn: int = Form(None), allow_smtp: bool = Form(False), db: BIC_DB = Depends(get_db)):
+    db.update("clients", client_id, {"name": name, "email": email, "asn": asn, "allow_smtp": allow_smtp})
+    return RedirectResponse(url=f"/client/{client_id}", status_code=303)
+
+@app.get("/client/{client_id}/delete", response_class=RedirectResponse)
+async def delete_client(client_id: int, db: BIC_DB = Depends(get_db)):
+    from bic.modules import client_management # Local import to avoid circular dependencies
+    client_management.deprovision_and_delete_client(db_core=db, client_id=client_id)
+    return RedirectResponse(url="/clients", status_code=303)
 
 
-    handler_path = action_def['web_handler']
-    module_path, function_name = handler_path.rsplit('.', 1)
 
-    try:
-        # Dynamically import the module and get the function
-        module = importlib.import_module(module_path)
-        handler_function = getattr(module, function_name)
-
-        # WARNING: The following functions require sudo privileges which the web server
-        # does not have. In a production environment, this should be handled by a
-        # background worker queue (e.g., Celery, RQ) that runs with the necessary
-        # permissions. For now, these operations will likely fail if they modify
-        # system state like firewall or BIRD configs.
-        
-        # Call the handler with the DB and form data
-        # This assumes the function signature is (db_core, **kwargs)
-        result = handler_function(db_core=db, **data)
-        
-        # We can add more complex result handling later (e.g., showing messages)
-        print(result)
-
-    except (ImportError, AttributeError) as e:
-        raise HTTPException(status_code=500, detail=f"Could not execute action: {e}")
-    except Exception as e:
-        # This will catch errors from the handler function itself
-        raise HTTPException(status_code=500, detail=f"An error occurred during the action: {e}")
-
-    # Determine redirect based on action
-    if "client" in action_path:
-        return RedirectResponse(url="/clients", status_code=303)
-    elif "pool" in action_path:
-        return RedirectResponse(url="/network/pools", status_code=303)
-    
-    return RedirectResponse(url="/", status_code=303) # Default redirect
 
 
 # --- Detail Views (These are not dynamically generated) ---

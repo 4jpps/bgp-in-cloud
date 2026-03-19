@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+
+{% block title %}{{ title }}{% endblock %}
+
+{% block content %}
+    <h1>{{ title }}</h1>
+    <form method="post">
+        <div>
+            <label for="name">Name:</label>
+            <input type="text" id="name" name="name" value="{{ pool.name if pool else '' }}" required>
+        </div>
+        <div>
+            <label for="cidr">CIDR:</label>
+            <input type="text" id="cidr" name="cidr" value="{{ pool.cidr if pool else '' }}" required>
+        </div>
+        <div>
+            <label for="afi">Address Family:</label>
+            <select id="afi" name="afi" required>
+                <option value="ipv4" {% if pool and pool.afi == 'ipv4' %}selected{% endif %}>IPv4</option>
+                <option value="ipv6" {% if pool and pool.afi == 'ipv6' %}selected{% endif %}>IPv6</option>
+            </select>
+        </div>
+        <div>
+            <label for="description">Description:</label>
+            <textarea id="description" name="description">{{ pool.description if pool else '' }}</textarea>
+        </div>
+        <button type="submit">Save</button>
+        <a href="/network/pools" class="button">Cancel</a>
+    </form>
+{% endblock %}

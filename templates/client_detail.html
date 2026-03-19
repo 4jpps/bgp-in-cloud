@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+
+{% block title %}{{ client.name }}{% endblock %}
+
+{% block content %}
+    <h1>{{ client.name }}</h1>
+    <p><strong>ID:</strong> {{ client.id }}</p>
+    <p><strong>Email:</strong> {{ client.email }}</p>
+    <p><strong>ASN:</strong> {{ client.asn }}</p>
+    <p><strong>Allow SMTP:</strong> {{ 'Yes' if client.allow_smtp else 'No' }}</p>
+
+    <a href="/clients" class="button">Back to Clients</a>
+    <a href="/client/{{ client.id }}/edit" class="button">Edit</a>
+{% endblock %}

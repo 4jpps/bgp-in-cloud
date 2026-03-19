@@ -6,6 +6,15 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0705] - 2026-03-19
+
+### Added
+- **Web UI:** Implemented full CRUD (Create, Read, Update, Delete) functionality for both **Clients** and **IP Pools** in the web interface.
+- **Web UI:** Added a dynamic, dropdown navigation menu to the web interface to mirror the TUI's functionality.
+
+### Fixed
+- **Web App Crash:** Corrected a critical database initialization error that was preventing the web application from starting.
+
 ## [2026.03.19.0658] - 2026-03-19
 
 ### Fixed

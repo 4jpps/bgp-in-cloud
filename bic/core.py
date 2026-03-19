@@ -82,6 +82,16 @@ class BIC_DB:
                 'description TEXT'
             ])
 
+            self.create_table_if_not_exists('ip_allocations', [
+                'id INTEGER PRIMARY KEY AUTOINCREMENT',
+                'pool_id INTEGER NOT NULL',
+                'client_id INTEGER NOT NULL',
+                'ip_address TEXT NOT NULL UNIQUE',
+                'description TEXT',
+                'FOREIGN KEY(pool_id) REFERENCES ip_pools(id) ON DELETE CASCADE',
+                'FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE'
+            ])
+
             self.insert_or_replace('settings', {'key': 'bgp_local_asn', 'value': '401575'})
             self.conn.execute("PRAGMA user_version = 1")
             self.conn.commit()
@@ -106,6 +116,21 @@ class BIC_DB:
             self.conn.execute("PRAGMA user_version = 2")
             self.conn.commit()
             user_version = 2
+
+        if user_version < 3:
+            # Version 3: Add the missing ip_allocations table
+            self.create_table_if_not_exists('ip_allocations', [
+                'id INTEGER PRIMARY KEY AUTOINCREMENT',
+                'pool_id INTEGER NOT NULL',
+                'client_id INTEGER NOT NULL',
+                'ip_address TEXT NOT NULL UNIQUE',
+                'description TEXT',
+                'FOREIGN KEY(pool_id) REFERENCES ip_pools(id) ON DELETE CASCADE',
+                'FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE'
+            ])
+            self.conn.execute("PRAGMA user_version = 3")
+            self.conn.commit()
+            user_version = 3
 
     def create_table_if_not_exists(self, table_name, columns):
         query = f"CREATE TABLE IF NOT EXISTS {table_name} ({ ', '.join(columns)})"

@@ -5,6 +5,12 @@
     grid-size: 2;
     grid-columns: 1fr 35;
     background: #0d1117;
+    height: 100%;
+}
+
+#footer-container {
+    dock: bottom;
+    height: 2;
 }
 
 #menu-pane {

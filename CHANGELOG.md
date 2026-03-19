@@ -6,6 +6,18 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0630] - 2026-03-19
+
+### Changed
+- **System Dashboard:** The legacy "System Dashboard" has been completely refactored into a modern, live-updating `textual` screen, eliminating the full-screen takeover and providing a much smoother experience.
+- **UX:** The new System Dashboard now uses a "Press any key to return" prompt for a more intuitive workflow.
+
+### Fixed
+- **Critical TUI Crash:** Corrected a catastrophic layout regression that caused the main menu and statistics panel to disappear.
+- **Critical TUI Crash:** Corrected a `NameError` for `system_management` that prevented the application from launching.
+- **Robust Statistics:** The disk usage statistic is now gathered using the more reliable `psutil` library to prevent `N/A` errors.
+- **TUI Footer:** Implemented a more robust layout for the footer to ensure it is always visible.
+
 ## [2026.03.19.0627] - 2026-03-19
 
 ### Fixed

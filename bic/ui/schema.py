@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from typing import List, Dict, Any, Callable, Type
+from typing import List, Dict, Any, Callable, Type, Optional
+
 from textual.screen import Screen
 
 @dataclass
@@ -10,7 +11,7 @@ class FormField:
     required: bool = False
     default: Any = None
     # For select fields
-    options: List[Any] = field(default_factory=list)
+    options: Optional[List[str]] = None
     # For select_from_db fields
     db_source_table: str = None
     db_source_display_key: str = None

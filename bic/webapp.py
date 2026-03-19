@@ -62,6 +62,10 @@ async def render_page(request: Request, path: str, db: BIC_DB = Depends(get_db))
     if not ui_item or not ui_item.item:
         raise HTTPException(status_code=404, detail="Page not found")
 
+    if isinstance(ui_item.item, UIMenu):
+        context = {"request": request, "settings": settings, "item": ui_item.item, "menu": menu_structure, "current_path": path, "version": __version__}
+        return templates.TemplateResponse("generic_menu.html", context)
+
     if isinstance(ui_item.item, UIView):
         context = {"request": request, "settings": settings, "view": ui_item.item, "menu": menu_structure, "current_path": path, "version": __version__}
         items = ui_item.item.handler(db)

@@ -30,6 +30,7 @@ body {
 
 .nav-links {
     display: flex;
+    gap: 20px; /* Add space between links */
 }
 
 .nav-dropdown {

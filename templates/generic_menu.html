@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.name }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-4">{{ item.name }}</h1>
+
+<div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+    {% for sub_item in item.items %}
+    <a href="{{ url_for('render_page', path=sub_item.path.lstrip('/')) }}" class="block p-6 bg-white border border-gray-200 rounded-lg shadow hover:bg-gray-100 dark:bg-gray-800 dark:border-gray-700 dark:hover:bg-gray-700">
+        <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">{{ sub_item.name }}</h5>
+        <p class="font-normal text-gray-700 dark:text-gray-400">Click to manage {{ sub_item.name | lower }}.</p>
+    </a>
+    {% endfor %}
+</div>
+
+{% endblock %}

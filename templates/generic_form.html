@@ -13,7 +13,7 @@
                     id="{{ field.name }}" 
                     name="{{ field.name }}" 
                     {% if field.required %}required{% endif %}
-                    value="{{ initial_data[field.name] if initial_data and field.name in initial_data else field.default if field.default else '' }}"
+                    value="{{ data.get(field.name, '') }}"
                 >
             </div>
         {% endfor %}

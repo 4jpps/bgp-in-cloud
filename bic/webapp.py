@@ -79,7 +79,18 @@ async def render_page(request: Request, path: str, db: BIC_DB = Depends(get_db))
         return templates.TemplateResponse("generic_list.html", context)
     elif isinstance(ui_item, UIAction):
         context["action"] = ui_item
-        context["initial_data"] = ui_item.loader(db) if ui_item.loader else {}
+
+        initial_data = {}
+        if ui_item.loader:
+            # Handle loaders for direct actions (e.g. from menu) which might need an ID from query params
+            item_id = request.query_params.get("id")
+            if item_id:
+                initial_data = ui_item.loader(db_core=db, id=int(item_id))
+            else:
+                # This branch handles loaders that don't need an ID (like for creation forms)
+                initial_data = ui_item.loader(db_core=db)
+
+        context["initial_data"] = initial_data
         return templates.TemplateResponse("generic_form.html", context)
     else:
         raise HTTPException(status_code=500, detail="Invalid UI item type")

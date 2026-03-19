@@ -32,7 +32,7 @@ class MainMenuScreen(Screen):
                 with Vertical(id="menu-container"):
                     for item in self.menu_data.items:
                         if not item.hidden:
-                            yield Button(item.name, id=item.path)
+                            yield Button(item.name, id=item.path.replace('/', '-').lstrip('-'))
             # Only show stats pane on the root menu
             if self.menu_data.name == "Main Menu":
                 with Vertical(id="stats-pane"):

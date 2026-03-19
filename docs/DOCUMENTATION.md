@@ -30,9 +30,6 @@ This document provides a detailed breakdown of each file and directory in the pr
 - **`webapp.py`**
   - **Purpose**: The entry point for the FastAPI web server. It acts as a generic rendering engine for the UI Schema. It uses dynamic routes to interpret the UI schema and render the correct view using a minimal set of generic templates. It contains almost no hardcoded logic for specific pages.
 
-- **`__main__.py`**
-  - **Purpose**: The main entry point when running the application as a module. It parses command-line arguments (`--tui` or `--web`) and launches the appropriate interface.
-
 - **`__version__.py`**
   - **Purpose**: Stores the current version string for the application.
 

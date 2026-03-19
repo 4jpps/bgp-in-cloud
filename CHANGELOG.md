@@ -17,3 +17,6 @@ All notable changes to this project will be documented in this file.
 - NAT rules for private IP space.
 - Blackhole routing for public prefixes.
 - Hierarchical IP allocation logic for pools.
+
+### Fixed
+- TUI widget ID generation to use valid identifiers, preventing startup crashes.

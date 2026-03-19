@@ -14,8 +14,8 @@ The entire application is designed to be definition-driven, meaning both the TUI
 
 2.  **Clone the Repository**:
     ```bash
-    git clone https://github.com/4jpps/bic.git
-    cd bic
+    git clone https://github.com/4jpps/bgp-in-cloud.git
+    cd bgp-in-cloud
     ```
 
 3.  **Run the Installer**:

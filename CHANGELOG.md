@@ -6,6 +6,12 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0517] - 2026-03-19
+
+### Fixed
+- **Definitive TUI Overhaul:** The TUI has been completely rewritten with a stable and correct Textual implementation, resolving all previous crashes and usability issues.
+- **Critical Bug:** Corrected a `SyntaxError` in `network_management.py`.
+
 ## [2026.03.19.0459] - 2026-03-19
 
 ### Added

@@ -15,39 +15,37 @@ from bic.__version__ import __version__
 MENU_STACK = [MENU_STRUCTURE]
 PATH_TITLES = ["Main Menu"]
 
-class StatsTable(Static):
-    """A widget to display system statistics."""
+class StatsTable(DataTable):
+    """A DataTable widget that automatically updates with system stats."""
     def __init__(self, db_core: BIC_DB, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.db_core = db_core
+        self.zebra_stripes=True
 
     def on_mount(self) -> None:
+        self.add_column("Metric", width=12)
+        self.add_column("Value")
         self.update_stats()
         self.set_interval(5, self.update_stats)
 
     def update_stats(self) -> None:
+        self.clear()
         stats = statistics_management.gather_all_statistics(self.db_core)
         system_stats = stats.get('system', {})
         network_stats = stats.get('network', {})
         db_stats = stats.get('database', {})
 
-        table = DataTable(zebra_stripes=True)
-        table.add_column("Metric", width=12)
-        table.add_column("Value")
-
-        table.add_row("[bold green]CPU Load[/]", f"{system_stats.get('cpu_load', 'N/A')}% / {system_stats.get('cpu_cores', 'N/A')}c")
-        table.add_row("[bold green]Memory[/]", f"{system_stats.get('mem_percent', 'N/A')}% used")
-        table.add_row("[bold green]Disk[/]", f"{system_stats.get('disk_percent', 'N/A')}% used")
+        self.add_row("[bold green]CPU Load[/]", f"{system_stats.get('cpu_load', 'N/A')}% / {system_stats.get('cpu_cores', 'N/A')}c")
+        self.add_row("[bold green]Memory[/]", f"{system_stats.get('mem_percent', 'N/A')}% used")
+        self.add_row("[bold green]Disk[/]", f"{system_stats.get('disk_percent', 'N/A')}% used")
         wan_stats = network_stats.get('wan', {})
-        table.add_row("[bold green]WAN Out[/]", f"{wan_stats.get('bytes_sent', 'N/A')}")
-        table.add_row("[bold green]WAN In[/]", f"{wan_stats.get('bytes_recv', 'N/A')}")
+        self.add_row("[bold green]WAN Out[/]", f"{wan_stats.get('bytes_sent', 'N/A')}")
+        self.add_row("[bold green]WAN In[/]", f"{wan_stats.get('bytes_recv', 'N/A')}")
 
-        table.add_row("", "")
-        table.add_row("[bold blue]Clients[/]", str(db_stats.get('clients', 'N/A')))
-        table.add_row("[bold blue]IP Pools[/]", str(db_stats.get('ip_pools', 'N/A')))
-        table.add_row("[bold blue]Subnets[/]", str(db_stats.get('ip_subnets', 'N/A')))
-
-        self.update(table)
+        self.add_row("", "")
+        self.add_row("[bold blue]Clients[/]", str(db_stats.get('clients', 'N/A')))
+        self.add_row("[bold blue]IP Pools[/]", str(db_stats.get('ip_pools', 'N/A')))
+        self.add_row("[bold blue]Subnets[/]", str(db_stats.get('ip_subnets', 'N/A')))
 
 class Menu(Static):
     """A widget to display the current menu."""

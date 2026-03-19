@@ -67,6 +67,17 @@ def get_next_available_ip_in_pool(db_core: BIC_DB, pool_id: int):
     if not pool:
         return None, None
 
+    network = ipaddress.ip_network(pool['cidr'])
+    allocated_ips_rows = db_core.find_all_by('ip_allocations', {'pool_id': pool_id})
+    allocated_ips = {ipaddress.ip_address(row['ip_address']) for row in allocated_ips_rows}
+
+    for ip in network.hosts():
+        if ip not in allocated_ips:
+            ip_str = str(ip)
+            alloc_id = db_core.insert('ip_allocations', {'pool_id': pool_id, 'ip_address': ip_str})
+            return ip_str, alloc_id
+    return None, None
+
 def add_pool(db_core: BIC_DB, name: str, cidr: str, description: str):
     """Adds a new IP pool to the database after validation."""
     try:
@@ -107,18 +118,6 @@ def delete_pool(db_core: BIC_DB, pool_id: int):
     update_bird_export_config(db_core)
 
     return {"success": True, "message": f"IP Pool '{pool_name}' and its {len(allocations)} placeholder allocation(s) have been deleted."}
-
-
-    network = ipaddress.ip_network(pool['cidr'])
-    allocated_ips_rows = db_core.find_all_by('ip_allocations', {'pool_id': pool_id})
-    allocated_ips = {ipaddress.ip_address(row['ip_address']) for row in allocated_ips_rows}
-
-    for ip in network.hosts():
-        if ip not in allocated_ips:
-            ip_str = str(ip)
-            alloc_id = db_core.insert('ip_allocations', {'pool_id': pool_id, 'ip_address': ip_str})
-            return ip_str, alloc_id
-    return None, None
 
 def get_next_available_ip_in_pool_by_name(db_core: BIC_DB, pool_name: str):
     pool = db_core.find_one_by('ip_pools', {'name': pool_name})

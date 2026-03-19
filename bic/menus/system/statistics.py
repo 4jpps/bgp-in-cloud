@@ -45,7 +45,7 @@ class SystemDashboardScreen(Screen):
                 yield Static(id="system-stats")
             with Vertical(id="body-pane"):
                 yield Static(id="wan-stats")
-                yield Panel("Future Traffic Graph", title="Traffic", border_style="blue")
+                yield Static(Panel("Future Traffic Graph", title="Traffic", border_style="blue"))
         yield Footer()
 
     def on_mount(self) -> None:

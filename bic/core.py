@@ -8,7 +8,7 @@ class BIC_DB:
     """
     def __init__(self, base_dir):
         self.db_path = os.path.join(base_dir, "ipam.db")
-        self.conn = sqlite3.connect(self.db_path)
+        self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
         self.conn.row_factory = sqlite3.Row
         self.initialize_schema()
 

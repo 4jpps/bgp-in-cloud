@@ -48,6 +48,27 @@ class MainMenuScreen(Screen):
 
     def update_stats(self) -> None:
         stats = statistics_management.gather_all_statistics(self.db_core)
+        display = f"""Pools: {stats['ipam']['pools']}
+Clients: {stats['ipam']['clients']}
+Allocated IPs: {stats['ipam']['single_ips_allocated']}
+Allocated Subnets: {stats['ipam']['subnets_allocated']}"""
+        self.query_one("#stats-display", Static).update(display)
+
+    def on_button_pressed(self, event: Button.Pressed) -> None:
+        button_id = event.button.id
+        for item in self.menu_data.items:
+            sanitized_path = item.path.replace('/', '-').lstrip('-')
+            if sanitized_path == button_id:
+                if isinstance(item.item, UIMenu):
+                    self.app.push_screen(MainMenuScreen(self.db_core, item.item))
+                elif isinstance(item.item, UIView):
+                    self.app.push_screen(GenericListScreen(self.db_core, item.item))
+                elif isinstance(item.item, UIAction):
+                    if item.path == "/clients/provision":
+                        self.app.push_screen(ProvisionClientScreen(self.db_core))
+                    else:
+                        self.app.push_screen(GenericFormScreen(self.db_core, item.item))
+                break
         stats_text = (
             f"[bold]Clients:[/bold] {stats['total_clients']}\n"
             f"[bold]IP Pools:[/bold] {stats['total_pools']}\n"

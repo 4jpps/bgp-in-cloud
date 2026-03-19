@@ -1,5 +1,6 @@
 from textual.app import ComposeResult
 from textual.screen import Screen
+from textual.binding import Binding
 from textual.widgets import Header, Footer, Button, Static, Input
 from textual.containers import VerticalScroll
 

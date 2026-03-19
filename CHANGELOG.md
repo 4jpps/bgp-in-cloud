@@ -6,6 +6,11 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 
 ---
 
+## [2026.03.19.0658] - 2026-03-19
+
+### Fixed
+- **TUI Crash:** Corrected a `NameError` for `Binding` in the IP pool editor screen by adding the missing import.
+
 ## [2026.03.19.0656] - 2026-03-19
 
 ### Fixed

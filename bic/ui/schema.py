@@ -4,17 +4,19 @@ from typing import List, Dict, Any, Callable, Type, Optional
 from textual.screen import Screen
 
 @dataclass
+class FormSelectOption:
+    label: str
+    value: Any
+
+@dataclass
 class FormField:
     name: str
     label: Optional[str] = None
     type: str = "text"
     required: bool = False
     default: Any = None
-    # For select fields
-    options: Optional[List[str]] = None
-    # For select_from_db fields
-    db_source_table: str = None
-    db_source_display_key: str = None
+    options: List[FormSelectOption] = field(default_factory=list)
+    options_loader: Callable = None
 
 @dataclass
 class UIAction:
@@ -23,6 +25,7 @@ class UIAction:
     loader: Callable = None # Optional function to load initial form data
     tui_screen: Type[Screen] = None
     form_fields: List[FormField] = field(default_factory=list)
+    actions: List["UIMenuItem"] = field(default_factory=list) # Nested actions
 
 @dataclass
 class UIMenuItem:

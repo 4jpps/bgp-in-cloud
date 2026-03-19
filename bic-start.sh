@@ -13,7 +13,7 @@ MODE=${1:---tui}
 
 if [ "$MODE" = "--tui" ]; then
     echo "Starting BIC IPAM - TUI Mode..."
-    python3 "$BASE_DIR/bic/tui/main_menu.py"
+    python3 -m bic.tui.main_menu
 elif [ "$MODE" = "--web" ]; then
     echo "Starting BIC IPAM - Web App Mode..."
     echo "API will be available at http://127.0.0.1:8000"

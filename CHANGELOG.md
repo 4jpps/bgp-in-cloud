@@ -16,6 +16,11 @@ This project adheres to [Calendar Versioning](https://calver.org/) using the `YY
 ### Changed
 - The TUI now uses a CSS file (`main_menu.css`) for styling and layout.
 
+## [2026.03.19.0510] - 2026-03-19
+
+### Fixed
+- **Critical TUI Crash:** Corrected a `VisualError` that occurred when updating the statistics panel by implementing the correct widget mounting procedure in Textual.
+
 ## [2026.03.19.0506] - 2026-03-19
 
 ### Changed

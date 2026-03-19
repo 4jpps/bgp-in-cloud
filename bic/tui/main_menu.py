@@ -22,10 +22,12 @@ class StatsTable(Static):
         self.db_core = db_core
 
     def on_mount(self) -> None:
+        """Set a timer to update the stats every 5 seconds."""
         self.update_stats()
         self.set_interval(5, self.update_stats)
 
     def update_stats(self) -> None:
+        """Fetch new stats and update the table."""
         stats = statistics_management.gather_all_statistics(self.db_core)
         system_stats = stats.get('system', {})
         network_stats = stats.get('network', {})
@@ -38,16 +40,19 @@ class StatsTable(Static):
         table.add_row("[bold green]CPU Load[/]", f"{system_stats.get('cpu_load', 'N/A')}% / {system_stats.get('cpu_cores', 'N/A')}c")
         table.add_row("[bold green]Memory[/]", f"{system_stats.get('mem_percent', 'N/A')}% used")
         table.add_row("[bold green]Disk[/]", f"{system_stats.get('disk_percent', 'N/A')}% used")
+        
         wan_stats = network_stats.get('wan', {})
         table.add_row("[bold green]WAN Out[/]", f"{wan_stats.get('bytes_sent', 'N/A')}")
         table.add_row("[bold green]WAN In[/]", f"{wan_stats.get('bytes_recv', 'N/A')}")
 
-        table.add_row("", "")
+        table.add_row("", "") # Spacer
         table.add_row("[bold blue]Clients[/]", str(db_stats.get('clients', 'N/A')))
         table.add_row("[bold blue]IP Pools[/]", str(db_stats.get('ip_pools', 'N/A')))
         table.add_row("[bold blue]Subnets[/]", str(db_stats.get('ip_subnets', 'N/A')))
 
-        self.update(table)
+        # Correctly mount the new table
+        self.query("DataTable").remove()
+        self.mount(table)
 
 class Menu(Static):
     """A widget to display the current menu."""

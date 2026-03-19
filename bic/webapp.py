@@ -57,6 +57,10 @@ async def dashboard(request: Request, db: BIC_DB = Depends(get_db)):
 
 @app.get("/page/{path:path}", response_class=HTMLResponse)
 async def render_page(request: Request, path: str, db: BIC_DB = Depends(get_db)):
+    # Special redirect for client provisioning
+    if path == "clients/provision/new":
+        return RedirectResponse(url="/clients/provision/new", status_code=302)
+    
     settings = system_management.get_all_settings(db)
     ui_item = find_ui_item_by_path(path)
     if not ui_item or not ui_item.item:

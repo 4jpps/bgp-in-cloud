@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+    <section id="statistics">
+        <h2>System Dashboard</h2>
+        <div class="grid">
+            <article>
+                <header>System Stats</header>
+                <ul>
+                    <li><strong>CPU Load Avg:</strong> {{ stats.system.load_avg }}</li>
+                    <li><strong>Memory Usage:</strong> {{ stats.system.memory_percent }}%</li>
+                    <li><strong>Disk Usage:</strong> {{ stats.system.disk_percent }}%</li>
+                </ul>
+            </article>
+            <article>
+                <header>IPAM Stats</header>
+                <ul>
+                    <li><strong>Clients:</strong> {{ stats.ipam.clients }}</li>
+                    <li><strong>IP Pools:</strong> {{ stats.ipam.pools }}</li>
+                    <li><strong>Allocated IPs:</strong> {{ stats.ipam.single_ips_allocated }}</li>
+                    <li><strong>Allocated Subnets:</strong> {{ stats.ipam.subnets_allocated }}</li>
+                </ul>
+            </article>
+            <article>
+                <header>WAN Interface: {{ stats.wan_interface }}</header>
+                <ul>
+                    <li><strong>Received:</strong> {{ (stats.network.rx_bytes / 1024 / 1024) | round(2) }} MB</li>
+                    <li><strong>Transmitted:</strong> {{ (stats.network.tx_bytes / 1024 / 1024) | round(2) }} MB</li>
+                </ul>
+            </article>
+        </div>
+    </section>
+
+    <section id="clients">
+        <h2>Clients</h2>
+        <table>
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>ASN</th>
+                    <th>Actions</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for client in clients %}
+                <tr>
+                    <td>{{ client.name }}</td>
+                    <td>{{ client.email }}</td>
+                    <td>{{ client.asn if client.asn else 'N/A' }}</td>
+                    <td><a href="/client/{{ client.id }}" role="button" class="secondary">Manage</a></td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </section>
+{% endblock %}

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Network Pools{% endblock %}
+
+{% block content %}
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+            <h2 style="margin: 0;">Network Pools</h2>
+            <div>
+                <a href="/action/network-management/manage-ip-pools/add-new-pool" role="button" class="primary">{{ MENU_STRUCTURE['Network Management']['handler']['Manage IP Pools']['handler']['Add New Pool']['web_form'][0]['label'] }}</a>
+            <a href="/action/network-management/manage-ip-pools/swap-pool-prefix" role="button" class="secondary">{{ MENU_STRUCTURE['Network Management']['handler']['Manage IP Pools']['handler']['Swap Pool Prefix']['web_form'][0]['label'] }}</a>
+            <a href="/action/network-management/manage-ip-pools/delete-pool" role="button" class="contrast">{{ MENU_STRUCTURE['Network Management']['handler']['Manage IP Pools']['handler']['Delete Pool']['web_form'][0]['label'] }}</a>
+            </div>
+        </div>
+    <br>
+    <table>
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>CIDR</th>
+                <th>Description</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for pool in pools %}
+            <tr>
+                <td>{{ pool.name }}</td>
+                <td><code>{{ pool.cidr }}</code></td>
+                <td>{{ pool.description }}</td>
+                <td><i>N/A</i></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endblock %}

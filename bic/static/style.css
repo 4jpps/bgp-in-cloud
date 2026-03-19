@@ -1,0 +1,4 @@
+.main-grid {
+    grid-template-columns: 1fr 350px;
+    gap: var(--spacing);
+}

@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>BIC IPAM - {% block title %}Dashboard{% endblock %}</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@1/css/pico.min.css">
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <nav class="container-fluid">
+        <ul>
+            <li><strong>{{ settings.app_display_name | default('BIC IPAM') }}</strong></li>
+        </ul>
+        <ul>
+            {% for name, item in MENU_STRUCTURE.items() %}
+                {% if item.nav_path %}
+                    <li><a href="{{ item.nav_path }}">{{ name }}</a></li>
+                {% endif %}
+            {% endfor %}
+        </ul>
+    </nav>
+    <div class="grid main-grid">
+        <main class="container">
+            {% block content %}{% endblock %}
+        </main>
+        <aside class="container" id="stats-panel">
+            <h4>Loading Stats...</h4>
+        </aside>
+    </div>
+    <footer class="container">
+        <small>Copyright (c) 2026 Jeff Parrish PC Services. All Rights Reserved.</small>
+    </footer>
+
+    <script>
+        function updateStats() {
+            fetch('/api/stats')
+                .then(response => response.json())
+                .then(data => {
+                    const statsPanel = document.getElementById('stats-panel');
+                    let content = '<h4>System Statistics</h4>';
+                    content += `<p><strong>CPU:</strong> ${data.system.cpu_load}% | <strong>RAM:</strong> ${data.system.mem_percent}%</p>`;
+                    content += `<p><strong>Disk:</strong> ${data.system.disk_percent}% used</p>`;
+                    content += `<p><strong>WAN Traffic:</strong> ${data.network.wan.bytes_sent} sent | ${data.network.wan.bytes_recv} recv</p>`;
+                    content += '<hr>';
+                    content += '<h4>IPAM Database</h4>';
+                    content += `<p><strong>Clients:</strong> ${data.database.clients}</p>`;
+                    content += `<p><strong>IP Pools:</strong> ${data.database.ip_pools}</p>`;
+                    content += `<p><strong>Allocated IPs:</strong> ${data.database.ip_allocations}</p>`;
+                    content += `<p><strong>Assigned Subnets:</strong> ${data.database.ip_subnets}</p>`;
+                    statsPanel.innerHTML = content;
+                })
+                .catch(error => console.error('Error fetching stats:', error));
+        }
+
+        // Update stats every 5 seconds
+        setInterval(updateStats, 5000);
+        // Initial update
+        updateStats();
+    </script>
+</body>
+</html>

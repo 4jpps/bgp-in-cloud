@@ -18,13 +18,7 @@ The entire application is designed to be definition-driven, meaning both the TUI
     cd bgp-in-cloud
     ```
 
-3.  **Set Executable Permissions**:
-    Before running the installer, you must make the shell scripts executable.
-    ```bash
-    chmod +x *.sh
-    ```
-
-4.  **Run the Installer**:
+3.  **Run the Installer**:
     The installer script will set up a Python virtual environment, install dependencies, and prepare the system configuration.
     ```bash
     sudo ./bic-installer.sh

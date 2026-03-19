@@ -21,7 +21,7 @@ When preparing a new release, the following steps must be taken:
 2.  **Update the Version File:** The version is controlled by the `bic/__version__.py` file. To stamp a new version, run the following Python command from the root of the repository. This will overwrite the file with the current UTC date and time in the correct format.
 
     ```bash
-    python -c "from datetime import datetime, timezone; v = datetime.now(timezone.utc).strftime('%Y.%m.%d.%H%M'); open('bic/__version__.py', 'w').write(f'__version__ = \"{v}\"\n')"
+    python -c "from datetime import datetime; from zoneinfo import ZoneInfo; v = datetime.now(tz=ZoneInfo('America/Chicago')).astimezone(ZoneInfo('UTC')).strftime('%Y.%m.%d.%H%M'); open('bic/__version__.py', 'w').write(f'__version__ = \"{v}\"\n')"
     ```
 
 3.  **Commit the Changes:** Commit the updated `CHANGELOG.md` and `bic/__version__.py` files with a message like `Release: Version YYYY.MM.DD.HHmm`.

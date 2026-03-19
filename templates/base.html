@@ -14,7 +14,7 @@
             {% for item in menu.items %}
                 {% if not item.hidden %}
                 <a href="{{ url_for('render_page', path=item.path.lstrip('/')) if item.path != '/' else '/' }}" 
-                   class="nav-link {% if request.url.path == item.path %}active{% endif %}">
+                   class="nav-button-link {% if request.url.path == item.path %}active{% endif %}">
                     {{ item.name }}
                 </a>
                 {% endif %}

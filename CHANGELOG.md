@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1437
+
+-   **Bugfix:** Added the missing `Jinja2` dependency to `requirements.txt` to resolve a startup `AssertionError`.
+
 ## Version 2026.03.20.1434
 
 -   **Bugfix:** Replaced `passlib` with direct `bcrypt` calls to definitively resolve startup errors related to password hashing.

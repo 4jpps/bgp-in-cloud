@@ -12,5 +12,6 @@ cbor
 yubico-client
 pyotp
 qrcode
+Jinja2
 bcrypt>=3.2.0
 zxcvbn

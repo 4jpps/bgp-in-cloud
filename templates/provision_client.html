@@ -62,26 +62,26 @@ function addAssignment() {
     div.id = assignmentId;
 
     div.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
                 <label for="assignment_pool_id_${assignmentIndex}">Pool:</label>
-                <select name="assignment_pool_id[]" id="assignment_pool_id_${assignmentIndex}" onchange="togglePrefixField('${assignmentId}')" required>
+                <select name="assignment_pool_id[]" id="assignment_pool_id_${assignmentIndex}" onchange="handlePoolChange(this, '${assignmentId}')" required>
                     <option value="">-- Select Pool --</option>
                     {% for pool in pools %}
-                        <option value="{{ pool.id }}">{{ pool.name }}</option>
+                        <option value="{{ pool.id }}_{{ pool.afi }}_{{ pool.cidr.split('/')[1] }}">{{ pool.description or pool.name }}</option>
                     {% endfor %}
                 </select>
             </div>
             <div>
                 <label for="assignment_type_${assignmentIndex}">Type:</label>
-                <select name="assignment_type[]" id="assignment_type_${assignmentIndex}" onchange="togglePrefixField('${assignmentId}')" required>
+                <select name="assignment_type[]" id="assignment_type_${assignmentIndex}" onchange="handlePoolChange(this, '${assignmentId}')" required>
                     <option value="static">Static IP</option>
                     <option value="subnet">Subnet</option>
                 </select>
             </div>
-            <div class="prefix-field" style="display: none;">
+            <div class="prefix-container" style="display: none;">
                 <label for="assignment_prefix_${assignmentIndex}">Prefix Length:</label>
-                <input type="number" name="assignment_prefix[]" id="assignment_prefix_${assignmentIndex}">
+                <select name="assignment_prefix[]" id="assignment_prefix_${assignmentIndex}"></select>
             </div>
         </div>
         <div class="mt-2 text-right">
@@ -93,11 +93,32 @@ function addAssignment() {
     assignmentIndex++;
 }
 
-function togglePrefixField(assignmentId) {
+function handlePoolChange(selectElement, assignmentId) {
     const assignmentDiv = document.getElementById(assignmentId);
     const typeSelect = assignmentDiv.querySelector('select[name="assignment_type[]"]');
-    const prefixField = assignmentDiv.querySelector('.prefix-field');
-    prefixField.style.display = typeSelect.value === 'subnet' ? 'block' : 'none';
+    const prefixContainer = assignmentDiv.querySelector('.prefix-container');
+    const prefixSelect = assignmentDiv.querySelector('select[name="assignment_prefix[]"]');
+    const poolSelect = assignmentDiv.querySelector('select[name="assignment_pool_id[]"]');
+    
+    if (typeSelect.value === 'subnet' && poolSelect.value) {
+        prefixContainer.style.display = 'block';
+        prefixSelect.required = true;
+
+        const [poolId, poolAfi, poolPrefix] = poolSelect.value.split('_');
+        const startPrefix = parseInt(poolPrefix, 10);
+        const endPrefix = poolAfi === 'ipv4' ? 32 : 128;
+
+        prefixSelect.innerHTML = ''; // Clear existing options
+        for (let i = startPrefix; i <= endPrefix; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = i;
+            prefixSelect.appendChild(option);
+        }
+    } else {
+        prefixContainer.style.display = 'none';
+        prefixSelect.required = false;
+    }
 }
 
 function removeAssignment(assignmentId) {

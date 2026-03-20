@@ -9,51 +9,55 @@
     <div class="card mb-6">
         <h2 class="text-xl font-semibold mb-4">Client Details</h2>
         {% for field in fields %}
-            <div>
-                <label for="{{ field.name }}">{{ field.label }}:</label>
+            <div class="mb-4">
+                <label for="{{ field.name }}" class="block mb-1">{{ field.label }}:</label>
                 {% if field.type == "select" %}
                     <select id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
                         {% for opt in field.options %}
-                            <option value="{{ opt.value }}" {% if data.get(field.name) == opt.value %}selected{% endif %}>{{ opt.label }}</option>
+                            <option value="{{ opt.value }}" {% if data.get(field.name) == opt.value.split('_')[0] %}selected{% endif %}>{{ opt.label }}</option>
                         {% endfor %}
                     </select>
+                {% elif field.type == "hidden" %}
+                    <input type="hidden" id="{{ field.name }}" name="{{ field.name }}" value="{{ data.get(field.name, '') }}">
                 {% else %}
-                    <input type="{{ field.type }}" id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %} value="{{ data.get(field.name, '') }}">
+                    <input type="{{ field.type }}" id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %} value="{{ data.get(field.name, '') }}" {% if field.name == 'name' and action.name == 'Delete Client' %}readonly{% endif %}>
                 {% endif %}
             </div>
         {% endfor %}
     </div>
 
-    {% if data.ip_allocations or data.ip_subnets %}
-    <div class="card mb-6">
-        <h2 class="text-xl font-semibold mb-4">Current Assignments</h2>
-        <ul>
-            {% for alloc in data.ip_allocations %}
-            <li class="flex justify-between items-center py-2 border-b">
-                <span>IP: {{ alloc.ip_address }} ({{ alloc.description }})</span>
-                <a href="/remove-assignment/ip/{{ alloc.id }}?client_id={{ data.id }}" class="action-button-red">Remove</a>
-            </li>
-            {% endfor %}
-            {% for subnet in data.ip_subnets %}
-            <li class="flex justify-between items-center py-2 border-b">
-                <span>Subnet: {{ subnet.subnet }} ({{ subnet.description }})</span>
-                <a href="/remove-assignment/subnet/{{ subnet.id }}?client_id={{ data.id }}" class="action-button-red">Remove</a>
-            </li>
-            {% endfor %}
-        </ul>
-    </div>
+    {% if action.name == 'Edit Client' %}
+        {% if data.ip_allocations or data.ip_subnets %}
+        <div class="card mb-6">
+            <h2 class="text-xl font-semibold mb-4">Current Assignments</h2>
+            <ul>
+                {% for alloc in data.ip_allocations %}
+                <li class="flex justify-between items-center py-2 border-b">
+                    <span>IP: {{ alloc.ip_address }} ({{ alloc.description }})</span>
+                    <a href="/remove-assignment/ip/{{ alloc.id }}?client_id={{ data.id }}" class="action-button-red">Remove</a>
+                </li>
+                {% endfor %}
+                {% for subnet in data.ip_subnets %}
+                <li class="flex justify-between items-center py-2 border-b">
+                    <span>Subnet: {{ subnet.subnet }} ({{ subnet.description }})</span>
+                    <a href="/remove-assignment/subnet/{{ subnet.id }}?client_id={{ data.id }}" class="action-button-red">Remove</a>
+                </li>
+                {% endfor %}
+            </ul>
+        </div>
+        {% endif %}
+
+        <div class="card">
+            <h2 class="text-xl font-semibold mb-4">Add New Assignments</h2>
+            <div id="assignments-container" class="space-y-4"></div>
+            <div class="mt-4">
+                <button type="button" onclick="addAssignment()" class="action-button">+ Add Assignment</button>
+            </div>
+        </div>
     {% endif %}
 
-    <div class="card">
-        <h2 class="text-xl font-semibold mb-4">Add New Assignments</h2>
-        <div id="assignments-container" class="space-y-4"></div>
-        <div class="mt-4">
-            <button type="button" onclick="addAssignment()" class="action-button">+ Add Assignment</button>
-        </div>
-    </div>
-
     <div class="mt-6">
-        <button type="submit" class="action-button-green">Update Client</button>
+        <button type="submit" class="action-button-green">{{ action.name }}</button>
     </div>
 </form>
 
@@ -68,27 +72,35 @@ function addAssignment() {
     div.className = 'p-4 border rounded-md bg-gray-50 dark:bg-gray-800';
     div.id = assignmentId;
 
+    const poolOptions = `
+        {% for field in fields %}
+            {% if field.name == 'pool_id' %}
+                {% for opt in field.options %}
+                    <option value="{{ opt.value }}">{{ opt.label }}</option>
+                {% endfor %}
+            {% endif %}
+        {% endfor %}
+    `;
+
     div.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
                 <label for="assignment_pool_id_${assignmentIndex}">Pool:</label>
-                <select name="assignment_pool_id[]" id="assignment_pool_id_${assignmentIndex}" onchange="togglePrefixField('${assignmentId}')" required>
+                <select name="assignment_pool_id[]" id="assignment_pool_id_${assignmentIndex}" onchange="handlePoolChange(this, '${assignmentId}')" required>
                     <option value="">-- Select Pool --</option>
-                    {% for pool in action.actions[0].item.form_fields[1].options %}
-                        <option value="{{ pool.value }}">{{ pool.label }}</option>
-                    {% endfor %}
+                    ${poolOptions}
                 </select>
             </div>
             <div>
                 <label for="assignment_type_${assignmentIndex}">Type:</label>
-                <select name="assignment_type[]" id="assignment_type_${assignmentIndex}" onchange="togglePrefixField('${assignmentId}')" required>
+                <select name="assignment_type[]" id="assignment_type_${assignmentIndex}" onchange="handlePoolChange(this, '${assignmentId}')" required>
                     <option value="static">Static IP</option>
                     <option value="subnet">Subnet</option>
                 </select>
             </div>
-            <div class="prefix-field" style="display: none;">
+            <div class="prefix-container" style="display: none;">
                 <label for="assignment_prefix_${assignmentIndex}">Prefix Length:</label>
-                <input type="number" name="assignment_prefix[]" id="assignment_prefix_${assignmentIndex}">
+                <select name="assignment_prefix[]" id="assignment_prefix_${assignmentIndex}"></select>
             </div>
         </div>
         <div class="mt-2 text-right">
@@ -100,11 +112,32 @@ function addAssignment() {
     assignmentIndex++;
 }
 
-function togglePrefixField(assignmentId) {
+function handlePoolChange(selectElement, assignmentId) {
     const assignmentDiv = document.getElementById(assignmentId);
     const typeSelect = assignmentDiv.querySelector('select[name="assignment_type[]"]');
-    const prefixField = assignmentDiv.querySelector('.prefix-field');
-    prefixField.style.display = typeSelect.value === 'subnet' ? 'block' : 'none';
+    const prefixContainer = assignmentDiv.querySelector('.prefix-container');
+    const prefixSelect = assignmentDiv.querySelector('select[name="assignment_prefix[]"]');
+    const poolSelect = assignmentDiv.querySelector('select[name="assignment_pool_id[]"]');
+    
+    if (typeSelect.value === 'subnet' && poolSelect.value) {
+        prefixContainer.style.display = 'block';
+        prefixSelect.required = true;
+
+        const [poolId, poolAfi, poolPrefix] = poolSelect.value.split('_');
+        const startPrefix = parseInt(poolPrefix, 10);
+        const endPrefix = poolAfi === 'ipv4' ? 32 : 128;
+
+        prefixSelect.innerHTML = ''; // Clear existing options
+        for (let i = startPrefix; i <= endPrefix; i++) {
+            const option = document.createElement('option');
+            option.value = i;
+            option.textContent = i;
+            prefixSelect.appendChild(option);
+        }
+    } else {
+        prefixContainer.style.display = 'none';
+        prefixSelect.required = false;
+    }
 }
 
 function removeAssignment(assignmentId) {

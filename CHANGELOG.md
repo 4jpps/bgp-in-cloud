@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 2026.03.20.1515
+
+-   **UAT:** Completed a full user acceptance test, validating all navigation, page rendering, and core functionality.
+-   **UI/UX:** Implemented a comprehensive layout overhaul, including a top navigation bar with dropdowns and a functional toast notification system.
+
 ## Version 2026.03.20.1511
 
 -   **UI/UX:** Overhauled the main layout to use a horizontal navigation bar with dropdown menus.

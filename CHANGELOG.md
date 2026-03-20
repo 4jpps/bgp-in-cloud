@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 2026.03.20.1459
+
+-   **UI/UX:** Redesigned the login form with a modern, centered card layout.
+-   **UI/UX:** Corrected the update notification to function as a proper toast.
+
 ## Version 2026.03.20.1457
 
 -   **Bugfix:** Resolved a `NameError` after login by refactoring the `get_current_user` function to use database-driven JWT settings.

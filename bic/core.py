@@ -5,6 +5,25 @@ import uuid
 import threading
 from pathlib import Path
 
+def get_wan_interface():
+    """Gets the primary public-facing network interface name."""
+    try:
+        cmd = "ip route get 8.8.8.8 | awk '{print $5}'"
+        interface = subprocess.check_output(cmd, shell=True, text=True).strip()
+        return interface
+    except Exception:
+        return "eth0"
+
+def get_wan_ip():
+    """Gets the primary public IP address of the server."""
+    interface = get_wan_interface()
+    try:
+        cmd = f"ip -4 addr show {interface} | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}'"
+        ip = subprocess.check_output(cmd, shell=True, text=True).strip()
+        return ip
+    except Exception:
+        return None
+
 # Use thread-local data to ensure each thread gets its own DB connection
 local = threading.local()
 

@@ -35,16 +35,13 @@ def get_db():
 
 # --- Helper function to find schema items ---
 def find_ui_item_by_path(path: str):
-    parts = path.strip("/").split("/")
-    current_level = menu_structure.items
-    found_item = None
-    for part in parts:
-        found_item = next((item for item in current_level if item.path.endswith(part)), None)
-        if found_item and isinstance(found_item.item, UIMenu):
-            current_level = found_item.item.items
-        elif found_item:
-            break
-    return found_item
+    # A simple and direct lookup
+    for menu in menu_structure.items:
+        if isinstance(menu.item, UIMenu):
+            for item in menu.item.items:
+                if item.path.endswith(path):
+                    return item
+    return None
 
 # --- Main Routes ---
 @app.get("/", response_class=HTMLResponse)
@@ -90,6 +87,12 @@ async def render_page(request: Request, path: str, db: BIC_DB = Depends(get_db))
         for field in ui_item.item.form_fields:
             if field.type == "select" and field.options_loader:
                 field.options = field.options_loader(db)
+        # Also process nested actions
+        if ui_item.item.actions:
+            for sub_action_item in ui_item.item.actions:
+                for field in sub_action_item.item.form_fields:
+                    if field.type == "select" and field.options_loader:
+                        field.options = field.options_loader(db)
         context["fields"] = ui_item.item.form_fields
         return templates.TemplateResponse("generic_form.html", context)
 

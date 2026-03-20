@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1347
+
+-   **Bugfix:** Removed an unused `SECRET_KEY` import in `bic/webapp.py` that was causing a startup error.
+
 ## Version 2026.03.20.1344
 
 -   **Security:** Migrated `SECRET_KEY` from a hardcoded value to a secure, database-driven setting. A new key is now generated automatically on first startup.

@@ -22,7 +22,7 @@ from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from jose import JWTError, jwt
 
-from bic.core import BIC_DB, get_logger, SECRET_KEY, ALGORITHM
+from bic.core import BIC_DB, get_logger
 from bic.ui.main import main_menu as menu_structure
 from bic.ui.schema import UIMenu, UIMenuItem, UIView, UIAction
 from bic.modules import (

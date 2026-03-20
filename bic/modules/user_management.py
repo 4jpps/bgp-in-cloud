@@ -6,32 +6,29 @@ authorization, and user CRUD operations.
 
 import uuid
 from datetime import datetime, timedelta
-from passlib.context import CryptContext
+import bcrypt
 from zxcvbn import zxcvbn
 from jose import JWTError, jwt
 from bic.core import BIC_DB, get_logger
 from bic.modules.system_management import get_secret_key, get_jwt_algorithm, get_token_expire_minutes, add_audit_log
 
-# Initialize logger and password context
+# Initialize logger
 log = get_logger(__name__)
-pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_password(password: str) -> str:
-    """Hashes a password using bcrypt, truncating to 72 bytes if necessary."""
+    """Hashes a password using bcrypt."""
+    # bcrypt automatically handles the 72-byte limit by truncating.
     password_bytes = password.encode('utf-8')
-    if len(password_bytes) > 72:
-        log.warning("Password exceeds 72 bytes and will be truncated for hashing.")
-        password_bytes = password_bytes[:72]
-
-    # Passlib expects a string, so we decode the (potentially truncated) bytes.
-    # We use 'replace' to avoid errors from cutting a multi-byte character in half.
-    password_safe_str = password_bytes.decode('utf-8', 'replace')
-    
-    return pwd_context.hash(password_safe_str)
+    salt = bcrypt.gensalt()
+    hashed_password = bcrypt.hashpw(password_bytes, salt)
+    return hashed_password.decode('utf-8')
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verifies a plain password against a hash."""
-    return pwd_context.verify(plain_password, hashed_password)
+    password_bytes = plain_password.encode('utf-8')
+    hashed_password_bytes = hashed_password.encode('utf-8')
+    # bcrypt.checkpw implicitly handles the 72-byte limit for the plain_password.
+    return bcrypt.checkpw(password_bytes, hashed_password_bytes)
 
 def is_password_strong(password: str) -> bool:
     """Checks if a password meets minimum strength requirements using zxcvbn.

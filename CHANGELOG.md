@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1431
+
+-   **Refactor:** Replaced `passlib` with direct `bcrypt` calls to resolve dependency conflicts and simplify the password hashing implementation.
+
 ## Version 2026.03.20.1427
 
 -   **Bugfix:** Pinned `bcrypt` version to `>3.2.0` to resolve a critical version incompatibility with `passlib` that was causing startup errors.

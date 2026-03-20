@@ -1,6 +1,5 @@
 fastapi
 uvicorn
-passlib
 bcrypt
 zxcvbn
 python-jose[cryptography]

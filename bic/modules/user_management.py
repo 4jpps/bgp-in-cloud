@@ -10,7 +10,7 @@ from passlib.context import CryptContext
 from zxcvbn import zxcvbn
 from jose import JWTError, jwt
 from bic.core import BIC_DB, get_logger
-from bic.modules.system_management import get_secret_key, get_jwt_algorithm, get_token_expire_minutes
+from bic.modules.system_management import get_secret_key, get_jwt_algorithm, get_token_expire_minutes, add_audit_log
 
 # Initialize logger and password context
 log = get_logger(__name__)
@@ -153,22 +153,6 @@ def login_user(db_core: BIC_DB, username: str, password: str):
         expires_delta=access_token_expires
     )
     return {"access_token": access_token, "token_type": "bearer"}
-
-def add_audit_log(db_core: BIC_DB, action: str, user_id: str = None, details: str = None):
-    """Adds a new entry to the audit log table.
-
-    Args:
-        db_core: An instance of the BIC_DB database core.
-        action: A string describing the action being logged (e.g., "login_failed").
-        user_id: The optional UUID of the user performing the action.
-        details: Optional additional details about the event.
-    """
-    log_data = {
-        "user_id": user_id,
-        "action": action,
-        "details": details
-    }
-    db_core.insert("audit_log", log_data)
 
 def list_users(db_core: BIC_DB, **kwargs) -> list:
     """Lists all users in the system.

@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1400
+
+-   **Bugfix:** Completed a comprehensive audit and refactoring of UI handlers to resolve all module-related `AttributeError` issues at startup. Consolidated audit log and backup functions into the `system_management` module.
+
 ## Version 2026.03.20.1353
 
 -   **Bugfix:** Restored the `get_all_settings` function, fixing a startup error caused by a missing UI loader function.

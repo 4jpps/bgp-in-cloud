@@ -75,7 +75,7 @@ def create_bgp_peer(db_core: BIC_DB, name: str, hostname: str, asn: int, enabled
     }
     peer_id = db_core.insert("bgp_peers", peer_data)
     if peer_id:
-        from .user_management import add_audit_log
+        from .system_management import add_audit_log
         actor_id = user['id'] if user else None
         add_audit_log(db_core, user_id=actor_id, action="create_bgp_peer", details=f"Created BGP peer {name} (ID: {peer_id})")
         return {"success": True}
@@ -103,7 +103,7 @@ def update_bgp_peer(db_core: BIC_DB, id: str, name: str, hostname: str, asn: int
         "wireguard_tunnel_id": wireguard_tunnel_id if wireguard_tunnel_id else None,
     }
     db_core.update("bgp_peers", id, update_data)
-    from .user_management import add_audit_log
+    from .system_management import add_audit_log
     actor_id = user['id'] if user else None
     add_audit_log(db_core, user_id=actor_id, action="update_bgp_peer", details=f"Updated BGP peer {name} (ID: {id})")
     return {"success": True}
@@ -124,7 +124,7 @@ def delete_bgp_peer(db_core: BIC_DB, id: str, user: dict = None, **kwargs):
     
     log.warning(f"Deleting BGP peer {id} ({peer['name']})")
     db_core.delete("bgp_peers", id)
-    from .user_management import add_audit_log
+    from .system_management import add_audit_log
     actor_id = user['id'] if user else None
     add_audit_log(db_core, user_id=actor_id, action="delete_bgp_peer", details=f"Deleted BGP peer {peer['name']} (ID: {id})")
     return {"success": True}
@@ -276,7 +276,7 @@ def add_advertised_prefix(db_core: BIC_DB, peer_id: str, prefix: str, user: dict
     _regenerate_bird_prefixes_config(db_core)
 
     if ad_id:
-        from .user_management import add_audit_log
+        from .system_management import add_audit_log
         actor_id = user['id'] if user else None
         add_audit_log(db_core, user_id=actor_id, action="add_bgp_prefix", details=f"Added prefix {prefix} to peer {peer_id}")
         return {"success": True}
@@ -303,7 +303,7 @@ def delete_advertised_prefix(db_core: BIC_DB, id: str, user: dict = None, **kwar
 
     _regenerate_bird_prefixes_config(db_core)
 
-    from .user_management import add_audit_log
+    from .system_management import add_audit_log
     actor_id = user['id'] if user else None
     add_audit_log(db_core, user_id=actor_id, action="delete_bgp_prefix", details=f"Deleted prefix {advertisement['prefix']} from peer {advertisement['peer_id']}")
     return {"success": True}
@@ -333,7 +333,7 @@ def toggle_blackhole_prefix(db_core: BIC_DB, id: str, user: dict = None, **kwarg
 
     _regenerate_bird_prefixes_config(db_core)
 
-    from .user_management import add_audit_log
+    from .system_management import add_audit_log
     actor_id = user['id'] if user else None
     add_audit_log(db_core, user_id=actor_id, action="toggle_bgp_blackhole", details=f"Set blackhole to {new_status} for {advertisement['prefix']}")
     return {"success": True}

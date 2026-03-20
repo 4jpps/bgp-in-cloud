@@ -34,7 +34,14 @@ def get_latest_version() -> str | None:
     try:
         with httpx.Client(timeout=10.0) as client:
             response = client.get(REPO_URL, follow_redirects=True)
-            response.raise_for_status()  # Raise an exception for 4xx or 5xx status codes
+            try:
+        response.raise_for_status()  # Raise an exception for 4xx or 5xx status codes
+    except httpx.HTTPStatusError as e:
+        if e.response.status_code == 404:
+            log.warning("No public releases found on GitHub repository. Cannot check for updates.")
+            return None, None # Return None if no releases are found
+        else:
+            raise # Re-raise other HTTP errors
             data = response.json()
             latest_tag = data.get('tag_name')
             log.info(f"Found latest version tag: {latest_tag}")

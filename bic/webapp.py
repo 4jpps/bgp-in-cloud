@@ -251,9 +251,17 @@ async def render_page(request: Request, path: str, db: BIC_DB = Depends(get_db),
 @limiter.limit("5/minute")
 async def handle_login(request: Request, db: BIC_DB = Depends(get_db)):
     form_data = await request.form()
-    user = await asyncio.to_thread(user_management.login_user, db_core=db, username=form_data['username'], password=form_data['password'])
-    if not user or not isinstance(user, dict):
+    login_result = await asyncio.to_thread(user_management.login_user, db_core=db, username=form_data['username'], password=form_data['password'])
+    if not login_result or not isinstance(login_result, dict):
         return RedirectResponse(url="/page/auth/login?error=1", status_code=303)
+
+    # Fetch the full user object to ensure 'id' is available
+    user = await asyncio.to_thread(db.find_one, "users", {"username": form_data['username']})
+    if not user:
+        return RedirectResponse(url="/page/auth/login?error=1", status_code=303)
+    
+    # Combine the access token from login with the full user object
+    user['access_token'] = login_result.get('access_token')
 
     yubikey = await asyncio.to_thread(db.find_one, "yubikey_credentials", {"user_id": user['id']})
     google_auth = await asyncio.to_thread(db.find_one, "google_authenticator_secrets", {"user_id": user['id']})

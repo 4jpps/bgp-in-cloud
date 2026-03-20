@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 2026.03.20.1448
+
+-   **Bugfix:** Gracefully handle 404 errors when checking for updates from GitHub.
+-   **Bugfix:** Resolved a `KeyError` during login by ensuring the full user object is fetched.
+
 ## Version 2026.03.20.1444
 
 -   **Bugfix:** Added the missing `python-multipart` dependency to resolve form parsing errors.

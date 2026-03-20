@@ -127,3 +127,44 @@ th, td {
 .action-button-red:hover {
     background-color: #b22d2a;
 }
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+
+body {
+    font-family: 'Inter', sans-serif;
+}
+
+.action-button {
+    background-color: var(--color-primary);
+    color: white;
+    padding: 0.5rem 1rem;
+    border-radius: 0.25rem;
+    text-decoration: none;
+    transition: background-color 0.2s;
+}
+
+.action-button:hover {
+    opacity: 0.9;
+}
+
+.action-button-green-sm {
+    background-color: var(--color-secondary);
+}
+
+.data-table a {
+    color: var(--color-primary);
+    text-decoration: none;
+}
+
+.data-table a:hover {
+    text-decoration: underline;
+}
+
+.status-established {
+    color: var(--color-secondary);
+    font-weight: bold;
+}
+
+.blackholed {
+    background-color: #4c2b36;
+}

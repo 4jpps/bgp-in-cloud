@@ -11,26 +11,42 @@ from typing import Optional, List, Dict, Any
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(threadName)s - %(levelname)s - %(message)s')
 log = logging.getLogger(__name__)
 
-# --- Network Utilities ---
-# ... (get_wan_interface and get_wan_ip as previously defined)
-
 # --- Thread-Local Database Connection ---
 local = threading.local()
 
 def get_db_connection(db_path: Path) -> sqlite3.Connection:
-    # ... (get_db_connection as previously defined)
+    """Establishes and returns a thread-local database connection."""
+    if not hasattr(local, 'connection') or local.connection is None:
+        log.info(f"Creating new DB connection for thread {threading.get_ident()} to {db_path}")
+        try:
+            local.connection = sqlite3.connect(db_path, check_same_thread=False, timeout=10)
+            local.connection.row_factory = lambda c, r: {col[0]: r[idx] for idx, col in enumerate(c.description)}
+            local.connection.execute("PRAGMA foreign_keys = ON")
+        except sqlite3.Error as e:
+            log.critical(f"Failed to connect to database at {db_path}: {e}")
+            raise
+    return local.connection
 
-# --- Core DB Class ---
+# --- Core Database Class ---
 class BIC_DB:
     """Main database interaction class for the application."""
     def __init__(self, db_path: str = "bic.db", base_dir: str = None):
-        # ... (__init__ as previously defined)
+        self.db_path = Path(base_dir or ".") / db_path
+        self.conn = get_db_connection(self.db_path)
+        self._run_migrations()
 
     def _run_migrations(self):
-        # ... (_run_migrations as previously defined)
+        """Initializes the database schema and runs necessary migrations."""
+        try:
+            with self.conn:
+                cursor = self.conn.cursor()
+                self._create_schema(cursor)
+        except sqlite3.Error as e:
+            log.error(f"Database migration failed: {e}")
+            self.conn.rollback()
 
     def _create_schema(self, cursor: sqlite3.Cursor):
-        """Defines and creates all application tables."""
+        """Defines and creates all application tables if they do not exist."""
         cursor.execute("CREATE TABLE IF NOT EXISTS clients (...)")
         # ... (All other CREATE TABLE statements)
 

@@ -69,7 +69,7 @@ Attached you will find your configuration files for WireGuard and BGP.
             server.starttls()
             server.login(smtp_user, smtp_pass)
             server.send_message(msg)
-            log.info(f"Successfully sent welcome email to {client['name']} ({client['email']})")
+            log.info(f"Successfully sent welcome email to {client['name']}")
             db_core.insert('email_log', {'client_id': client_id, 'subject': subject})
     except Exception as e:
         log.error(f"Failed to send welcome email to {client['email']}: {e}")

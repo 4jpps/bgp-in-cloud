@@ -20,7 +20,6 @@ def update_wireguard_config_for_client(db_core: BIC_DB, client_id: str):
 
     peer = db_core.find_one("wireguard_peers", {"client_id": client_id})
     if not peer:
-        # This client doesn't have a WG peer, which is a valid state.
         log.info(f"Skipping WireGuard config for client {client_id} as they have no peer.")
         return
 
@@ -29,11 +28,9 @@ def update_wireguard_config_for_client(db_core: BIC_DB, client_id: str):
         log.error(f"Cannot generate WireGuard config: Interface {peer['interface_id']} not found for peer {peer['id']}.")
         return
 
-    # Get settings from DB, with sensible defaults
     dns_servers = db_core.get_setting('dns_servers', '1.1.1.1, 1.0.0.1')
     server_endpoint = db_core.get_setting('wireguard_endpoint', 'SERVER_PUBLIC_IP')
 
-    # Collect all assigned IPs and subnets for this client to build AllowedIPs
     client_ips = [a['ip_address'] for a in db_core.find_all_by('ip_allocations', {'client_id': client_id})]
     client_subnets = [s['subnet'] for s in db_core.find_all_by('ip_subnets', {'client_id': client_id})]
     allowed_ips = ", ".join(client_ips + client_subnets)
@@ -61,7 +58,7 @@ def write_server_config_from_db(db_core: BIC_DB, interface_id: str):
 
     peers = db_core.find_all_by("wireguard_peers", {"interface_id": interface_id})
     conf_path = Path(f"/etc/wireguard/{interface['name']}.conf")
-    wan_interface = db_core.get_setting('wan_interface', 'eth0') # Get from settings
+    wan_interface = db_core.get_setting('wan_interface', 'eth0')
 
     conf = f"""[Interface]
 Address = {interface['address']}
@@ -82,7 +79,6 @@ AllowedIPs = {peer['address']}
 
 """
     try:
-        # Write to a temporary file first, then move, to be more atomic
         tmp_path = conf_path.with_suffix('.tmp')
         tmp_path.write_text(conf)
         subprocess.run(["sudo", "mv", str(tmp_path), str(conf_path)], check=True)

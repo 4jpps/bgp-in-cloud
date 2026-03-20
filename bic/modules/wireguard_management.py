@@ -31,6 +31,9 @@ def write_server_config_from_db(db_core: BIC_DB, interface_id: int):
     content += f"Address = {interface['address']}\n"
     content += f"ListenPort = {interface['listen_port']}\n"
     content += f"PrivateKey = {interface['private_key']}\n"
+    content += "MTU = 1420\n"
+    content += "PostUp = sysctl -w net.ipv4.ip_forward=1\n"
+    content += "PostUp = sysctl -w net.ipv6.conf.all.forwarding=1\n"
 
     peers = db_core.find_all_by('wireguard_peers', {'interface_id': interface_id})
     for peer in peers:
@@ -62,57 +65,64 @@ def update_wireguard_config_for_client(db_core: BIC_DB, client_id: int):
     if not server_interface:
         return {"success": False, "message": "Could not ensure WireGuard server interface."}
 
-    # Calculate AllowedIPs
+    # Get all assigned IPs and subnets
     single_ips = db_core.find_all_by('ip_allocations', {'client_id': client_id})
     subnets = db_core.find_all_by('ip_subnets', {'client_id': client_id})
-    allowed_ips_list = [f"{alloc['ip_address']}/{128 if ':' in alloc['ip_address'] else 32}" for alloc in single_ips]
-    allowed_ips_list.extend([s['subnet'] for s in subnets])
-    allowed_ips_str = ", ".join(allowed_ips_list)
+    
+    # Separate transit from direct assignments
+    transit_ips = [f"{alloc['ip_address']}/{128 if ':' in alloc['ip_address'] else 32}" for alloc in single_ips if "Transit" in alloc.get('description', '')]
+    direct_ips = [f"{alloc['ip_address']}/{128 if ':' in alloc['ip_address'] else 32}" for alloc in single_ips if "Transit" not in alloc.get('description', '')]
+    direct_subnets = [s['subnet'] for s in subnets]
+
+    # Determine server-side AllowedIPs based on client type
+    if client['type'] == 'Transit':
+        server_allowed_ips = transit_ips
+    else: # Standard
+        server_allowed_ips = transit_ips + direct_ips + direct_subnets
+    server_allowed_ips_str = ", ".join(server_allowed_ips)
 
     # Find or create peer
     peer = db_core.find_one('wireguard_peers', {'client_id': client_id})
     if peer:
-        # Update existing peer
-        db_core.update('wireguard_peers', peer['id'], {'allowed_ips': allowed_ips_str})
-        client_private_key = db_core.get_setting(f"wg_client_{client_id}_privkey") # Assumes we store this
+        db_core.update('wireguard_peers', peer['id'], {'allowed_ips': server_allowed_ips_str})
+        client_private_key = db_core.get_setting(f"wg_client_{client_id}_privkey")
     else:
-        # Create new peer
         keys = generate_keys()
         if not keys:
             return {"success": False, "message": "Failed to generate WireGuard keys."}
         
-        peer_id = db_core.insert('wireguard_peers', {
+        db_core.insert('wireguard_peers', {
             'interface_id': server_interface['id'],
             'client_id': client_id,
             'name': client['name'],
             'public_key': keys['public_key'],
-            'allowed_ips': allowed_ips_str,
+            'allowed_ips': server_allowed_ips_str,
         })
         client_private_key = keys['private_key']
-        # Store the private key securely
         db_core.insert_or_replace('settings', {'key': f"wg_client_{client_id}_privkey", 'value': client_private_key})
 
-    # Generate client config content
+    # --- Generate Client Config ---
     all_settings = {s['key']: s['value'] for s in db_core.find_all('settings')}
     dns_v4 = all_settings.get('dns_server_ipv4', '1.1.1.1')
     dns_v6 = all_settings.get('dns_server_ipv6', '2606:4700:4700::1111')
     wg_endpoint = all_settings.get('wg_server_endpoint', 'your-server.example.com')
-    client_p2p_ips = [f"{alloc['ip_address']}/{128 if ':' in alloc['ip_address'] else 32}" for alloc in single_ips if 'P2P' in alloc.get('description', '')]
+
+    # Determine client-side Address and AllowedIPs
+    if client['type'] == 'Transit':
+        client_address_list = transit_ips
+        client_allowed_ips_list = transit_ips + ['0.0.0.0/0', '::/0']
+    else: # Standard
+        client_address_list = transit_ips + direct_ips + direct_subnets
+        client_allowed_ips_list = ['0.0.0.0/0', '::/0']
 
     client_conf = "[Interface]\n"
     client_conf += f"PrivateKey = {client_private_key}\n"
-    client_conf += f"Address = {', '.join(client_p2p_ips)}\n"
+    client_conf += f"Address = {', '.join(client_address_list)}\n"
     client_conf += f"DNS = {dns_v4}, {dns_v6}\n\n"
     client_conf += "[Peer]\n"
     client_conf += f"PublicKey = {server_interface['public_key']}\n"
     client_conf += f"Endpoint = {wg_endpoint}:{server_interface['listen_port']}\n"
-
-    if client.get('type') == 'Transit':
-        allowed_ips_parts = client_p2p_ips + ['0.0.0.0/0', '::/0']
-        client_conf += f"AllowedIPs = {', '.join(allowed_ips_parts)}\n"
-    else: # Standard client
-        client_conf += "AllowedIPs = 0.0.0.0/0, ::/0\n"
-
+    client_conf += f"AllowedIPs = {', '.join(client_allowed_ips_list)}\n"
     client_conf += "PersistentKeepalive = 25\n"
 
     db_core.update('clients', client_id, {'wireguard_conf': client_conf})

@@ -85,6 +85,7 @@ async def render_page(request: Request, path: str, db: BIC_DB = Depends(get_db))
                 data = ui_item.item.loader(db_core=db, id=int(item_id))
             else:
                 data = ui_item.item.loader(db_core=db)
+        context["data"] = data
         # Process fields for select options
         for field in ui_item.item.form_fields:
             if field.type == "select" and field.options_loader:

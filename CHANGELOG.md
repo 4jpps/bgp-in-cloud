@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1418
+
+-   **Bugfix:** Added missing `passlib` and `zxcvbn` dependencies to `requirements.txt` to prevent `ModuleNotFoundError` on startup.
+
 ## Version 2026.03.20.1416
 
 -   **Docs:** Added `git clone` command to the `README.md` for clarity.

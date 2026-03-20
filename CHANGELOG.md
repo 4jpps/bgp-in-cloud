@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1427
+
+-   **Bugfix:** Pinned `bcrypt` version to `>3.2.0` to resolve a critical version incompatibility with `passlib` that was causing startup errors.
+
 ## Version 2026.03.20.1424
 
 -   **Installer:** Added a `bic-installer.sh` script to automate the entire setup process, from virtual environment creation to database initialization.

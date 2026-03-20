@@ -31,6 +31,20 @@ def get_db():
     try: yield db
     finally: db.conn.close()
 
+@app.get("/", response_class=HTMLResponse)
+async def dashboard(request: Request, db: BIC_DB = Depends(get_db)):
+    settings = system_management.get_all_settings(db)
+    stats = statistics_management.gather_all_statistics(db)
+    clients = db.find_all("clients")
+    return templates.TemplateResponse("dashboard.html", {
+        "request": request, 
+        "settings": settings, 
+        "stats": stats, 
+        "clients": clients, 
+        "menu": menu_structure, 
+        "version": __version__
+    })
+
 @app.get("/api/perform-update", response_class=JSONResponse)
 async def perform_update_api():
     result = update_management.perform_update()

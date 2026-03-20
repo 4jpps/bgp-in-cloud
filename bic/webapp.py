@@ -31,7 +31,11 @@ def get_db():
     try: yield db
     finally: db.conn.close()
 
-# ... (existing code) ...
+@app.get("/api/perform-update", response_class=JSONResponse)
+async def perform_update_api():
+    result = update_management.perform_update()
+    return result
+
 
 @app.get("/api/check-update", response_class=JSONResponse)
 async def check_update_api():
@@ -46,7 +50,9 @@ async def periodic_update_check():
         # Check every 6 hours
         if not update_cache["last_checked"] or datetime.now() - update_cache["last_checked"] > timedelta(hours=6):
             print("Checking for application updates...")
-            new_version, changelog = update_management.is_update_available()
+            # Create a new DB instance within this thread
+            db = BIC_DB(base_dir=str(BASE_DIR.parent))
+            new_version, changelog = update_management.is_update_available(db)
             if new_version:
                 print(f"New version found: {new_version}")
                 update_cache["new_version"] = new_version
@@ -54,6 +60,7 @@ async def periodic_update_check():
             else:
                 print("Application is up to date.")
             update_cache["last_checked"] = datetime.now()
+            db.conn.close() # Close the connection for this thread
         await asyncio.sleep(3600) # Check again in 1 hour
 
 @app.on_event("startup")

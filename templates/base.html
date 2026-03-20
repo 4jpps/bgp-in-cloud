@@ -13,7 +13,7 @@
         <p>A new version is available! <strong id="new-version-text"></strong></p>
         <div class="mt-2">
             <button onclick="showChangelog()" class="action-button-sm">View Changelog</button>
-            <a href="https://github.com/4jpps/bgp-in-cloud/releases" target="_blank" class="action-button-green-sm">Update Now</a>
+            <button onclick="performUpdate()" id="update-now-btn" class="action-button-green-sm">Update Now</button>
             <button onclick="dismissToast()" class="action-button-red-sm">Dismiss</button>
         </div>
     </div>
@@ -74,6 +74,31 @@
 
         function dismissToast() {
             document.getElementById('update-toast').classList.add('hidden');
+        }
+
+        function performUpdate() {
+            const btn = document.getElementById('update-now-btn');
+            btn.disabled = true;
+            btn.textContent = 'Updating...';
+
+            fetch('/api/perform-update')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        btn.textContent = 'Update Complete';
+                        alert('Update complete! The application will now reload.');
+                        location.reload();
+                    } else {
+                        btn.textContent = 'Update Failed';
+                        alert(`Update failed: ${data.message}`);
+                        btn.disabled = false;
+                    }
+                })
+                .catch(err => {
+                    btn.textContent = 'Update Failed';
+                    alert(`An error occurred: ${err}`);
+                    btn.disabled = false;
+                });
         }
     </script>
 </body>

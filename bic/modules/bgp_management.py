@@ -8,182 +8,125 @@ PEERS_CONF_FILE = "/etc/bird/peers.conf"
 def list_bgp_sessions(db_core: BIC_DB):
     """Lists all BGP sessions from the database with client info."""
     try:
-        sessions = db_core.find_all_by("bgp_sessions", {})
-        clients_list = db_core.find_all_by("clients", {})
-        clients_map = {c['id']: c for c in clients_list}
+        sessions = db_core.find_all("bgp_sessions")
+        clients_map = {c['id']: c for c in db_core.find_all("clients")}
 
-        results = []
-        for session in sessions:
-            client = clients_map.get(session['client_id'])
-            if client:
-                results.append({
-                    "id": session['id'],
-                    "state": session['state'],
-                    "last_updated": session['last_updated'],
-                    "client_name": client['name'],
-                    "client_asn": client['asn']
-                })
-        return results
+        return [{
+            "id": s['id'], "state": s['state'], "last_updated": s['last_updated'],
+            "client_name": clients_map.get(s['client_id'], {}).get('name'),
+            "client_asn": clients_map.get(s['client_id'], {}).get('asn')
+        } for s in sessions if s['client_id'] in clients_map]
     except Exception as e:
         CONSOLE.print(f"[red]Error listing BGP sessions: {e}[/red]")
         return []
 
 def create_client_bgp_config(db_core: BIC_DB, client: dict):
-    """Generates a BGP session config for our server and returns it as a string."""
+    """Generates client-side BGP configs for FRR and BIRD."""
     if not client.get("asn"):
-        return None
+        return {}
 
-    local_asn = db_core.find_one("settings", {"key": "bgp_local_asn"})["value"]
+    local_asn = db_core.get_setting('bgp_local_asn')
     client_asn = client["asn"]
-    client_name = client["name"].replace(" ", "_").lower()
-
-    allocs = db_core.find_all_by("ip_allocations", {"client_id": client["id"]})
-    v4_neighbor_ip = next((a["ip_address"] for a in allocs if "WG Server P2P IPv4" in db_core.find_one("ip_pools", {"id": a["pool_id"]})["name"]), None)
-    v6_neighbor_ip = next((a["ip_address"] for a in allocs if "WG Server P2P IPv6" in db_core.find_one("ip_pools", {"id": a["pool_id"]})["name"]), None)
-
-    if not v4_neighbor_ip or not v6_neighbor_ip:
-        CONSOLE.print(f"[yellow]Warning: Could not find WG P2P IPs for {client['name']}. Skipping BGP config generation.[/yellow]")
-        return None
-
-    config_stanza = f'''
-# Managed by BIC IPAM - Peer: {client['name']}' (ASN {client_asn})
-protocol bgp from t_customer '{client_name}_v4' {{
-     neighbor {v4_neighbor_ip} as {client_asn};
-     ipv4 {{ import all; export all; }};
-     ipv6 {{ import none; export none; }};
-}}
-protocol bgp from t_customer '{client_name}_v6' {{
-     neighbor {v6_neighbor_ip} as {client_asn};
-     ipv4 {{ import none; export none; }};
-     ipv6 {{ import all; export all; }};
-}}
-'''
-    _append_to_peers_conf(config_stanza)
-    _reload_bird()
-    return config_stanza
-
-def delete_client_bgp_config(db_core: BIC_DB, client: dict):
-    """Removes a client's BGP session config from the system file."""
-    if not client.get("asn"):
-        return
-
-    client_name = client["name"].replace(" ", "_").lower()
-    _remove_stanza_from_peers_conf(f"protocol bgp from t_customer '{client_name}_v4'")
-    _remove_stanza_from_peers_conf(f"protocol bgp from t_customer '{client_name}_v6'")
-    _reload_bird()
-
-def create_client_frr_config(db_core: BIC_DB, client: dict):
-    """Generates a client-side FRRouting (FRR) BGP configuration."""
-    if not client.get("asn"):
-        return None
-
-    local_asn = db_core.find_one("settings", {"key": "bgp_local_asn"})["value"]
-    client_asn = client["asn"]
-
-    wg_server_p2p_ipv4_pool_id = db_core.find_one("ip_pools", {"name": "WG Server P2P IPv4"})["id"]
-    wg_server_p2p_ipv6_pool_id = db_core.find_one("ip_pools", {"name": "WG Server P2P IPv6"})["id"]
     
-    server_v4_ip = db_core.find_one("ip_allocations", {"pool_id": wg_server_p2p_ipv4_pool_id, "client_id": None})["ip_address"]
-    server_v6_ip = db_core.find_one("ip_allocations", {"pool_id": wg_server_p2p_ipv6_pool_id, "client_id": None})["ip_address"]
+    allocs = db_core.find_all_by("ip_allocations", {"client_id": client["id"]})
+    client_v4 = next((a["ip_address"] for a in allocs if "Transit P2P IPv4" in a.get("description", "")), None)
+    client_v6 = next((a["ip_address"] for a in allocs if "Transit P2P IPv6" in a.get("description", "")), None)
 
+    if not client_v4 or not client_v6:
+        return {}
+        
+    server_v4_pool = db_core.find_one('ip_pools', {'name': 'WG Server P2P IPv4'})
+    server_v6_pool = db_core.find_one('ip_pools', {'name': 'WG Server P2P IPv6'})
+    server_v4 = str(next(ipaddress.ip_network(server_v4_pool['cidr']).hosts()))
+    server_v6 = str(next(ipaddress.ip_network(server_v6_pool['cidr']).hosts()))
+
+    # --- FRR Config ---
     frr_conf = f"""!
-! FRRouting BGP configuration for {client['name']}
-! This should be adapted and placed in your /etc/frr/frr.conf
-!
 router bgp {client_asn}
- bgp router-id {client['name'].replace(' ', '_').lower()}.local
+ bgp router-id {client_v4}
  !
- neighbor {server_v4_ip} remote-as {local_asn}
- neighbor {server_v4_ip} description BGP in the Cloud (IPv4)
+ neighbor {server_v4} remote-as {local_asn}
+ neighbor {server_v4} description "BGP In Cloud IPv4"
  !
- neighbor {server_v6_ip} remote-as {local_asn}
- neighbor {server_v6_ip} description BGP in the Cloud (IPv6)
+ neighbor {server_v6} remote-as {local_asn}
+ neighbor {server_v6} description "BGP In Cloud IPv6"
  !
  address-family ipv4 unicast
-  network YOUR_PREFIX_HERE
+  ! Announce your prefixes here
+  ! network X.X.X.X/X
  exit-address-family
  !
  address-family ipv6 unicast
-  network YOUR_IPV6_PREFIX_HERE
+  ! Announce your prefixes here
+  ! network X:X::X/X
  exit-address-family
-!
 """
-    return frr_conf
 
-def create_client_bird_config(db_core: BIC_DB, client: dict):
-    """Generates a client-side BIRD configuration."""
-    if not client.get("asn"):
-        return None
-
-    local_asn = db_core.find_one("settings", {"key": "bgp_local_asn"})["value"]
-    client_asn = client["asn"]
-
-    wg_server_p2p_ipv4_pool_id = db_core.find_one("ip_pools", {"name": "WG Server P2P IPv4"})["id"]
-    wg_server_p2p_ipv6_pool_id = db_core.find_one("ip_pools", {"name": "WG Server P2P IPv6"})["id"]
-    
-    server_v4_ip = db_core.find_one("ip_allocations", {"pool_id": wg_server_p2p_ipv4_pool_id, "client_id": None})["ip_address"]
-    server_v6_ip = db_core.find_one("ip_allocations", {"pool_id": wg_server_p2p_ipv6_pool_id, "client_id": None})["ip_address"]
-
+    # --- BIRD Config ---
     bird_conf = f"""#
-# Example BIRD configuration for {client['name']}
-#
+router id {client_v4};
 
-router id YOUR_ROUTER_ID; # e.g. 1.1.1.1
-
-protocol device {{
-    scan time 10;
-}}
-
-protocol kernel {{
-    ipv4 {{ export all; }};
-    ipv6 {{ export all; }};
-}}
+protocol device {{ scan time 10; }}
+protocol kernel {{ ipv4 {{ export all; }}; ipv6 {{ export all; }}; }}
 
 protocol static {{
-    ipv4;
-    route YOUR_PREFIX_HERE blackhole;
+    # Announce your prefixes here
+    # route X.X.X.X/X blackhole;
 }}
 
-protocol static {{
-    ipv6;
-    route YOUR_IPV6_PREFIX_HERE blackhole;
+protocol bgp v4_uplink {{
+    local as {client_asn}; neighbor {server_v4} as {local_asn};
+    source address {client_v4};
+    ipv4 {{ import all; export where proto = "static"; }};
 }}
 
-protocol bgp v4_upstream {{
-    local as {client_asn};
-    neighbor {server_v4_ip} as {local_asn};
-    source address YOUR_WG_IPV4_ADDRESS; # Your end of the WireGuard tunnel
-    ipv4 {{
-        import all;
-        export where proto = "static";
-    }};
-}}
-
-protocol bgp v6_upstream {{
-    local as {client_asn};
-    neighbor {server_v6_ip} as {local_asn};
-    source address YOUR_WG_IPV6_ADDRESS; # Your end of the WireGuard tunnel
-    ipv6 {{
-        import all;
-        export where proto = "static";
-    }};
+protocol bgp v6_uplink {{
+    local as {client_asn}; neighbor {server_v6} as {local_asn};
+    source address {client_v6};
+    ipv6 {{ import all; export where proto = "static"; }};
 }}
 """
-    return bird_conf
+    return {"frr_conf": frr_conf, "bird_conf": bird_conf}
 
-def _append_to_peers_conf(stanza: str):
-    try:
-        with open("/tmp/bic_bgp_append.tmp", "w") as f:
-            f.write(stanza)
-        subprocess.run(f"sudo bash -c 'cat /tmp/bic_bgp_append.tmp >> {PEERS_CONF_FILE}'", shell=True, check=True)
-    except Exception as e:
-        CONSOLE.print(f"[bold red]Failed to append to {PEERS_CONF_FILE}: {e}[/bold red]")
+def update_server_bgp_config(db_core: BIC_DB):
+    """Generates the complete BIRD peers.conf file from all BGP clients."""
+    clients = db_core.find_all_by('clients', {'type': 'Transit'})
+    config_content = "# This file is auto-generated by BIC IPAM\n"
+    config_content += "# Do not edit manually.\n\n"
 
-def _remove_stanza_from_peers_conf(start_line: str):
+    for client in clients:
+        if not client.get("asn"):
+            continue
+
+        allocs = db_core.find_all_by("ip_allocations", {"client_id": client["id"]})
+        client_v4 = next((a["ip_address"] for a in allocs if "Transit P2P IPv4" in a.get("description", "")), None)
+        client_v6 = next((a["ip_address"] for a in allocs if "Transit P2P IPv6" in a.get("description", "")), None)
+        
+        if not client_v4 or not client_v6:
+            continue
+        
+        client_name_safe = client["name"].replace(" ", "_")
+        config_content += f"# Peer: {client['name']} (ASN: {client['asn']})\n"
+        config_content += f"protocol bgp {client_name_safe}_v4 {{\n"
+        config_content += f"    description \"{client['name']}\";\n"
+        config_content += f"    local as {db_core.get_setting('bgp_local_asn')};\n"
+        config_content += f"    neighbor {client_v4} as {client['asn']};\n"
+        config_content += f"    ipv4 {{ import all; export filter {{ if net ~ [0.0.0.0/0] then accept; reject; }}; }};\n"
+        config_content += f"}}\n\n"
+        config_content += f"protocol bgp {client_name_safe}_v6 {{\n"
+        config_content += f"    description \"{client['name']}\";\n"
+        config_content += f"    local as {db_core.get_setting('bgp_local_asn')};\n"
+        config_content += f"    neighbor {client_v6} as {client['asn']};\n"
+        config_content += f"    ipv6 {{ import all; export filter {{ if net ~ [::/0] then accept; reject; }}; }};\n"
+        config_content += f"}}\n\n"
+
     try:
-        subprocess.run(f"sudo sed -i '/^{start_line}/, /}}/d' {PEERS_CONF_FILE}", shell=True, check=True)
+        with open("/tmp/peers.conf.tmp", "w") as f:
+            f.write(config_content)
+        subprocess.run(["sudo", "mv", "/tmp/peers.conf.tmp", PEERS_CONF_FILE], check=True)
+        _reload_bird()
     except Exception as e:
-        CONSOLE.print(f"[bold red]Failed to remove stanza from {PEERS_CONF_FILE}: {e}[/bold red]")
+        CONSOLE.print(f"[bold red]Failed to write {PEERS_CONF_FILE}: {e}[/bold red]")
 
 def _reload_bird():
     try:

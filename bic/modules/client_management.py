@@ -8,9 +8,14 @@ def regenerate_client_configs(db_core: BIC_DB, client_id: int):
     wireguard_management.update_wireguard_config_for_client(db_core, client_id)
     client = db_core.find_one("clients", {"id": client_id})
     if client and client.get("asn"):
-        bgp_conf_content = bgp_management.create_client_bgp_config(db_core, client)
-        if bgp_conf_content:
-            db_core.update('clients', client_id, {'bgp_conf': bgp_conf_content})
+        bgp_configs = bgp_management.create_client_bgp_config(db_core, client)
+        if bgp_configs:
+            db_core.update('clients', client_id, {
+                'bgp_frr_conf': bgp_configs.get('frr_conf'),
+                'bgp_bird_conf': bgp_configs.get('bird_conf')
+            })
+        # Also update the server-side BGP config
+        bgp_management.update_server_bgp_config(db_core)
     
     from bic.modules.email_notifications import send_client_welcome_email
     send_client_welcome_email(db_core, client_id)

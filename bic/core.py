@@ -210,6 +210,14 @@ class BIC_DB:
             self.conn.commit()
             user_version = 10
 
+        if user_version < 11:
+            # Version 11: Add BGP config storage to clients table
+            self.add_column_if_not_exists('clients', 'bgp_frr_conf', 'TEXT')
+            self.add_column_if_not_exists('clients', 'bgp_bird_conf', 'TEXT')
+            self.conn.execute("PRAGMA user_version = 11")
+            self.conn.commit()
+            user_version = 11
+
     def create_table_if_not_exists(self, table_name, columns):
         query = f"CREATE TABLE IF NOT EXISTS {table_name} ({ ', '.join(columns)})"
         self._execute(query)

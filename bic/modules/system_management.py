@@ -30,3 +30,13 @@ def get_jwt_algorithm(db_core: BIC_DB) -> str:
 def get_token_expire_minutes(db_core: BIC_DB) -> int:
     """Retrieves the JWT expiration time in minutes, defaulting to 30."""
     return int(db_core.get_setting('ACCESS_TOKEN_EXPIRE_MINUTES', 30))
+
+def save_all_settings(db_core: BIC_DB, **kwargs):
+    """Iterates through kwargs and saves each as a setting in the database."""
+    log.info("Saving all system settings.")
+    for key, value in kwargs.items():
+        # Skip empty values and CSRF token
+        if value and key != 'csrf_token':
+            db_core.insert_or_replace('settings', {'key': key, 'value': value})
+            log.info(f"Saved setting: {key}")
+    return {"success": True}

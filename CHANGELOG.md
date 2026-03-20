@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1349
+
+-   **Bugfix:** Restored the `save_all_settings` function, which was causing a startup error due to a missing attribute in the system management module.
+
 ## Version 2026.03.20.1347
 
 -   **Bugfix:** Removed an unused `SECRET_KEY` import in `bic/webapp.py` that was causing a startup error.

@@ -1,4 +1,5 @@
 import subprocess
+import ipaddress
 from rich.console import Console
 from bic.core import BIC_DB
 
@@ -21,7 +22,7 @@ def list_bgp_sessions(db_core: BIC_DB):
         return []
 
 def create_client_bgp_config(db_core: BIC_DB, client: dict):
-    """Generates client-side BGP configs for FRR and BIRD."""
+    """Generates client-side BGP configs for FRR and BIRD based on IP family."""
     if not client.get("asn"):
         return {}
 
@@ -29,100 +30,82 @@ def create_client_bgp_config(db_core: BIC_DB, client: dict):
     client_asn = client["asn"]
     
     allocs = db_core.find_all_by("ip_allocations", {"client_id": client["id"]})
-    client_v4 = next((a["ip_address"] for a in allocs if "Transit P2P IPv4" in a.get("description", "")), None)
-    client_v6 = next((a["ip_address"] for a in allocs if "Transit P2P IPv6" in a.get("description", "")), None)
+    subnets = db_core.find_all_by("ip_subnets", {"client_id": client["id"]})
+    
+    has_ipv4 = any(ipaddress.ip_address(a['ip_address']).version == 4 for a in allocs) or any(ipaddress.ip_network(s['subnet']).version == 4 for s in subnets)
+    has_ipv6 = any(ipaddress.ip_address(a['ip_address']).version == 6 for a in allocs) or any(ipaddress.ip_network(s['subnet']).version == 6 for s in subnets)
 
-    if not client_v4 or not client_v6:
+    transit_v4 = next((a for a in allocs if "Transit P2P IPv4" in a.get('description', '')), None)
+    transit_v6 = next((a for a in allocs if "Transit P2P IPv6" in a.get('description', '')), None)
+
+    if (has_ipv4 and not transit_v4) or (has_ipv6 and not transit_v6):
         return {}
-        
-    server_v4_pool = db_core.find_one('ip_pools', {'name': 'WG Server P2P IPv4'})
-    server_v6_pool = db_core.find_one('ip_pools', {'name': 'WG Server P2P IPv6'})
-    server_v4 = str(next(ipaddress.ip_network(server_v4_pool['cidr']).hosts()))
-    server_v6 = str(next(ipaddress.ip_network(server_v6_pool['cidr']).hosts()))
+
+    server_interface = db_core.find_one('wireguard_interfaces', {'name': 'wg1'})
+    server_v4_ip = str(ipaddress.ip_network(server_interface['address'].split(',')[0].strip()).network_address + 1)
+    server_v6_ip = str(ipaddress.ip_network(server_interface['address'].split(',')[1].strip()).network_address + 1)
 
     # --- FRR Config ---
-    frr_conf = f"""!
-router bgp {client_asn}
- bgp router-id {client_v4}
- !
- neighbor {server_v4} remote-as {local_asn}
- neighbor {server_v4} description "BGP In Cloud IPv4"
- !
- neighbor {server_v6} remote-as {local_asn}
- neighbor {server_v6} description "BGP In Cloud IPv6"
- !
- address-family ipv4 unicast
-  ! Announce your prefixes here
-  ! network X.X.X.X/X
- exit-address-family
- !
- address-family ipv6 unicast
-  ! Announce your prefixes here
-  ! network X:X::X/X
- exit-address-family
-"""
+    frr_conf = f"!\nrouter bgp {client_asn}\n"
+    if has_ipv4: frr_conf += f" bgp router-id {transit_v4['ip_address']}\n"
+    frr_conf += " !\n"
+    if has_ipv4: frr_conf += f" neighbor {server_v4_ip} remote-as {local_asn}\n neighbor {server_v4_ip} description \"BGP In Cloud IPv4\"\n !\n"
+    if has_ipv6: frr_conf += f" neighbor {server_v6_ip} remote-as {local_asn}\n neighbor {server_v6_ip} description \"BGP In Cloud IPv6\"\n !\n"
+    if has_ipv4: frr_conf += " address-family ipv4 unicast\n  ! Announce your prefixes here\n  ! network X.X.X.X/X\n exit-address-family\n"
+    if has_ipv6: frr_conf += " address-family ipv6 unicast\n  ! Announce your prefixes here\n  ! network X:X::X/X\n exit-address-family\n"
 
     # --- BIRD Config ---
-    bird_conf = f"""#
-router id {client_v4};
+    bird_conf = ""
+    if has_ipv4: bird_conf += f"router id {transit_v4['ip_address']};\n\n"
+    bird_conf += "protocol device { scan time 10; }\nprotocol kernel {\n"
+    if has_ipv4: bird_conf += "    ipv4 { export all; };\n"
+    if has_ipv6: bird_conf += "    ipv6 { export all; };\n"
+    bird_conf += "}\n\nprotocol static {\n    # Announce your prefixes here\n    # route X.X.X.X/X blackhole;\n}\n"
+    if has_ipv4:
+        bird_conf += f"\nprotocol bgp v4_uplink {{\n    local as {client_asn}; neighbor {server_v4_ip} as {local_asn};\n    source address {transit_v4['ip_address']};\n    ipv4 {{ import all; export where proto = \"static\"; }};\n}}\n"
+    if has_ipv6:
+        bird_conf += f"\nprotocol bgp v6_uplink {{\n    local as {client_asn}; neighbor {server_v6_ip} as {local_asn};\n    source address {transit_v6['ip_address']};\n    ipv6 {{ import all; export where proto = \"static\"; }};\n}}\n"
 
-protocol device {{ scan time 10; }}
-protocol kernel {{ ipv4 {{ export all; }}; ipv6 {{ export all; }}; }}
-
-protocol static {{
-    # Announce your prefixes here
-    # route X.X.X.X/X blackhole;
-}}
-
-protocol bgp v4_uplink {{
-    local as {client_asn}; neighbor {server_v4} as {local_asn};
-    source address {client_v4};
-    ipv4 {{ import all; export where proto = "static"; }};
-}}
-
-protocol bgp v6_uplink {{
-    local as {client_asn}; neighbor {server_v6} as {local_asn};
-    source address {client_v6};
-    ipv6 {{ import all; export where proto = "static"; }};
-}}
-"""
     return {"frr_conf": frr_conf, "bird_conf": bird_conf}
 
 def update_server_bgp_config(db_core: BIC_DB):
     """Generates the complete BIRD peers.conf file from all BGP clients."""
     clients = db_core.find_all_by('clients', {'type': 'Transit'})
-    config_content = "# This file is auto-generated by BIC IPAM\n"
-    config_content += "# Do not edit manually.\n\n"
+    config_content = "# This file is auto-generated by BIC IPAM\n# Do not edit manually.\n\n"
 
     for client in clients:
-        if not client.get("asn"):
-            continue
+        if not client.get("asn"): continue
 
         allocs = db_core.find_all_by("ip_allocations", {"client_id": client["id"]})
-        client_v4 = next((a["ip_address"] for a in allocs if "Transit P2P IPv4" in a.get("description", "")), None)
-        client_v6 = next((a["ip_address"] for a in allocs if "Transit P2P IPv6" in a.get("description", "")), None)
+        subnets = db_core.find_all_by("ip_subnets", {"client_id": client["id"]})
         
-        if not client_v4 or not client_v6:
-            continue
+        has_ipv4 = any(ipaddress.ip_address(a['ip_address']).version == 4 for a in allocs) or any(ipaddress.ip_network(s['subnet']).version == 4 for s in subnets)
+        has_ipv6 = any(ipaddress.ip_address(a['ip_address']).version == 6 for a in allocs) or any(ipaddress.ip_network(s['subnet']).version == 6 for s in subnets)
+
+        transit_v4 = next((a for a in allocs if "Transit P2P IPv4" in a.get('description', '')), None)
+        transit_v6 = next((a for a in allocs if "Transit P2P IPv6" in a.get('description', '')), None)
         
-        client_name_safe = client["name"].replace(" ", "_")
+        client_name_safe = client["name"].replace(" ", "_").replace("-", "_")
         config_content += f"# Peer: {client['name']} (ASN: {client['asn']})\n"
-        config_content += f"protocol bgp {client_name_safe}_v4 {{\n"
-        config_content += f"    description \"{client['name']}\";\n"
-        config_content += f"    local as {db_core.get_setting('bgp_local_asn')};\n"
-        config_content += f"    neighbor {client_v4} as {client['asn']};\n"
-        config_content += f"    ipv4 {{ import all; export filter {{ if net ~ [0.0.0.0/0] then accept; reject; }}; }};\n"
-        config_content += f"}}\n\n"
-        config_content += f"protocol bgp {client_name_safe}_v6 {{\n"
-        config_content += f"    description \"{client['name']}\";\n"
-        config_content += f"    local as {db_core.get_setting('bgp_local_asn')};\n"
-        config_content += f"    neighbor {client_v6} as {client['asn']};\n"
-        config_content += f"    ipv6 {{ import all; export filter {{ if net ~ [::/0] then accept; reject; }}; }};\n"
-        config_content += f"}}\n\n"
+
+        if has_ipv4 and transit_v4:
+            config_content += f"protocol bgp {client_name_safe}_v4 {{\n"
+            config_content += f"    description \"{client['name']}\";\n"
+            config_content += f"    local as {db_core.get_setting('bgp_local_asn')};\n"
+            config_content += f"    neighbor {transit_v4['ip_address']} as {client['asn']};\n"
+            config_content += f"    ipv4 {{ import all; export filter {{ if net ~ [0.0.0.0/0] then accept; reject; }}; }};\n"
+            config_content += f"}}\n\n"
+        
+        if has_ipv6 and transit_v6:
+            config_content += f"protocol bgp {client_name_safe}_v6 {{\n"
+            config_content += f"    description \"{client['name']}\";\n"
+            config_content += f"    local as {db_core.get_setting('bgp_local_asn')};\n"
+            config_content += f"    neighbor {transit_v6['ip_address']} as {client['asn']};\n"
+            config_content += f"    ipv6 {{ import all; export filter {{ if net ~ [::/0] then accept; reject; }}; }};\n"
+            config_content += f"}}\n\n"
 
     try:
-        with open("/tmp/peers.conf.tmp", "w") as f:
-            f.write(config_content)
+        with open("/tmp/peers.conf.tmp", "w") as f: f.write(config_content)
         subprocess.run(["sudo", "mv", "/tmp/peers.conf.tmp", PEERS_CONF_FILE], check=True)
         _reload_bird()
     except Exception as e:

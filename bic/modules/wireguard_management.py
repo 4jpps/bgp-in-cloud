@@ -9,6 +9,14 @@ console = Console()
 WG_CONF_DIR = "/etc/wireguard/"
 BIC_CLIENT_CONF_DIR = os.path.join(os.path.expanduser("~"), ".bic", "client_confs")
 
+def _get_public_ip():
+    """Gets the server's public IP address."""
+    try:
+        return subprocess.check_output(["curl", "-s", "ifconfig.me"], text=True).strip()
+    except Exception as e:
+        console.print(f"[yellow]Warning: Could not determine public IP: {e}. Defaulting to localhost.[/yellow]")
+        return "127.0.0.1"
+
 def generate_keys():
     """Generates a new WireGuard private and public key pair."""
     try:
@@ -46,7 +54,6 @@ def write_server_config_from_db(db_core: BIC_DB, interface_id: int):
         content += f"AllowedIPs = {peer['allowed_ips']}\n"
 
     try:
-        # Write to a temp file and then move with sudo
         temp_path = f"/tmp/{interface['name']}.conf.tmp"
         with open(temp_path, 'w') as f:
             f.write(content)
@@ -68,23 +75,19 @@ def update_wireguard_config_for_client(db_core: BIC_DB, client_id: int):
     if not server_interface:
         return {"success": False, "message": "Could not ensure WireGuard server interface."}
 
-    # Get all assigned IPs and subnets
     single_ips = db_core.find_all_by('ip_allocations', {'client_id': client_id})
     subnets = db_core.find_all_by('ip_subnets', {'client_id': client_id})
     
-    # Separate transit from direct assignments
     transit_ips = [f"{alloc['ip_address']}/{128 if ':' in alloc['ip_address'] else 32}" for alloc in single_ips if "Transit" in alloc.get('description', '')]
     direct_ips = [f"{alloc['ip_address']}/{128 if ':' in alloc['ip_address'] else 32}" for alloc in single_ips if "Transit" not in alloc.get('description', '')]
     direct_subnets = [s['subnet'] for s in subnets]
 
-    # Determine server-side AllowedIPs based on client type
     if client['type'] == 'Transit':
         server_allowed_ips = transit_ips
     else: # Standard
         server_allowed_ips = transit_ips + direct_ips + direct_subnets
     server_allowed_ips_str = ", ".join(server_allowed_ips)
 
-    # Find or create peer
     peer = db_core.find_one('wireguard_peers', {'client_id': client_id})
     if peer:
         db_core.update('wireguard_peers', peer['id'], {'allowed_ips': server_allowed_ips_str})
@@ -95,22 +98,17 @@ def update_wireguard_config_for_client(db_core: BIC_DB, client_id: int):
             return {"success": False, "message": "Failed to generate WireGuard keys."}
         
         db_core.insert('wireguard_peers', {
-            'interface_id': server_interface['id'],
-            'client_id': client_id,
-            'name': client['name'],
-            'public_key': keys['public_key'],
-            'allowed_ips': server_allowed_ips_str,
+            'interface_id': server_interface['id'], 'client_id': client_id, 'name': client['name'],
+            'public_key': keys['public_key'], 'allowed_ips': server_allowed_ips_str,
         })
         client_private_key = keys['private_key']
         db_core.insert_or_replace('settings', {'key': f"wg_client_{client_id}_privkey", 'value': client_private_key})
 
-    # --- Generate Client Config ---
     all_settings = {s['key']: s['value'] for s in db_core.find_all('settings')}
     dns_v4 = all_settings.get('dns_server_ipv4', '1.1.1.1')
     dns_v6 = all_settings.get('dns_server_ipv6', '2606:4700:4700::1111')
-    wg_endpoint = all_settings.get('wg_server_endpoint', 'your-server.example.com')
+    wg_endpoint = all_settings.get('wg_server_endpoint') or _get_public_ip()
 
-    # Determine client-side Address and AllowedIPs
     if client['type'] == 'Transit':
         client_address_list = transit_ips
         client_allowed_ips_list = transit_ips + ['0.0.0.0/0', '::/0']
@@ -130,7 +128,6 @@ def update_wireguard_config_for_client(db_core: BIC_DB, client_id: int):
 
     db_core.update('clients', client_id, {'wireguard_conf': client_conf})
 
-    # Rewrite the server config to add/update the peer
     write_server_config_from_db(db_core, server_interface['id'])
     
     return {"success": True, "message": "WireGuard configuration updated."}
@@ -143,8 +140,6 @@ def remove_peer_from_interface(db_core: BIC_DB, peer_id: int):
     
     interface_id = peer['interface_id']
     db_core.delete('wireguard_peers', peer_id)
-
-    # Rewrite the server config to remove the peer
     write_server_config_from_db(db_core, interface_id)
     return True
 
@@ -159,7 +154,6 @@ def ensure_server_interface(db_core: BIC_DB):
     if not keys:
         return None
 
-    # Get server P2P addresses from the special pools
     v4_pool = db_core.find_one('ip_pools', {'name': 'WG Server P2P IPv4'})
     v6_pool = db_core.find_one('ip_pools', {'name': 'WG Server P2P IPv6'})
     
@@ -170,26 +164,20 @@ def ensure_server_interface(db_core: BIC_DB):
     server_v6 = v6_net.network_address + 1
 
     interface_id = db_core.insert('wireguard_interfaces', {
-        'name': 'wg1',
-        'listen_port': 51821, # Your specified port
+        'name': 'wg1', 'listen_port': 51821, 
         'address': f"{server_v4}/{v4_net.prefixlen}, {server_v6}/{v6_net.prefixlen}",
-        'private_key': keys['private_key'],
-        'public_key': keys['public_key']
+        'private_key': keys['private_key'], 'public_key': keys['public_key']
     })
     return db_core.find_one('wireguard_interfaces', {'id': interface_id})
 
 def rebuild_and_update_peer_allowed_ips(db_core: BIC_DB, client_id: int):
     """Recalculates a client's AllowedIPs and updates the WG config."""
-    # This function is now superseded by update_wireguard_config_for_client
     return update_wireguard_config_for_client(db_core, client_id)
 
 def list_peers_joined(db_core: BIC_DB):
     """Lists all WireGuard peers with client and interface info."""
     query = """
-        SELECT
-            p.id, p.name, p.public_key, p.allowed_ips,
-            c.name as client_name,
-            i.name as interface_name
+        SELECT p.id, p.name, p.public_key, p.allowed_ips, c.name as client_name, i.name as interface_name
         FROM wireguard_peers p
         LEFT JOIN clients c ON p.client_id = c.id
         LEFT JOIN wireguard_interfaces i ON p.interface_id = i.id

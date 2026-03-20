@@ -115,16 +115,19 @@ def get_next_available_ip_in_pool(db_core: BIC_DB, pool_id: int):
 
     try:
         network = ipaddress.ip_network(pool['cidr'])
-        
+
         # Get a set of already allocated IPs for efficient lookup
         allocations = db_core.find_all_by('ip_allocations', {'pool_id': pool_id})
         allocated_ips = {ipaddress.ip_address(alloc['ip_address']) for alloc in allocations}
-        
+
         # .hosts() intelligently yields only usable IPs, skipping network and broadcast
         for ip in network.hosts():
             if ip not in allocated_ips:
                 return str(ip)
-                
+
+        # If the loop completes, no IP was found
+        return None
+
     except ValueError as e:
         # Handle cases where the CIDR in the DB is invalid
         print(f"Error processing pool {pool_id}: {e}")

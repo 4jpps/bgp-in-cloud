@@ -11,8 +11,8 @@ def get_ip_pool_options(db_core: BIC_DB):
             label = p.get('description') or p['name']
             value = f"{p['id']}_{p['afi']}_{prefix}"
             options.append(FormSelectOption(label=label, value=value))
-        except IndexError:
-            continue # Skip pools with invalid CIDR format
+        except (IndexError, KeyError):
+            continue # Skip pools with invalid or incomplete data
     return options
 
 # Loader function for the edit form

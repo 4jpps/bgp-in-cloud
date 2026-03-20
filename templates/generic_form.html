@@ -9,20 +9,18 @@
     <div class="card mb-6">
         <h2 class="text-xl font-semibold mb-4">Client Details</h2>
         {% for field in fields %}
+            {% if field.type != 'hidden' %}
             <div class="mb-4">
                 <label for="{{ field.name }}" class="block mb-1">{{ field.label }}:</label>
-                {% if field.type == "select" %}
-                    <select id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
-                        {% for opt in field.options %}
-                            <option value="{{ opt.value }}" {% if data.get(field.name) == opt.value.split('_')[0] %}selected{% endif %}>{{ opt.label }}</option>
-                        {% endfor %}
-                    </select>
-                {% elif field.type == "hidden" %}
-                    <input type="hidden" id="{{ field.name }}" name="{{ field.name }}" value="{{ data.get(field.name, '') }}">
-                {% else %}
-                    <input type="{{ field.type }}" id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %} value="{{ data.get(field.name, '') }}" {% if field.name == 'name' and action.name == 'Delete Client' %}readonly{% endif %}>
-                {% endif %}
+                <select id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
+                    {% for opt in field.options %}
+                        <option value="{{ opt.value }}" {% if data.get(field.name) == opt.value.split('_')[0] %}selected{% endif %}>{{ opt.label }}</option>
+                    {% endfor %}
+                </select>
             </div>
+            {% else %}
+            <input type="hidden" id="{{ field.name }}" name="{{ field.name }}" value="{{ data.get(field.name, '') }}">
+            {% endif %}
         {% endfor %}
     </div>
 
@@ -73,12 +71,8 @@ function addAssignment() {
     div.id = assignmentId;
 
     const poolOptions = `
-        {% for field in fields %}
-            {% if field.name == 'pool_id' %}
-                {% for opt in field.options %}
-                    <option value="{{ opt.value }}">{{ opt.label }}</option>
-                {% endfor %}
-            {% endif %}
+        {% for pool in pools %}
+            <option value="{{ pool.id }}_{{ pool.afi }}_{{ pool.cidr.split('/')[1] }}">{{ pool.description or pool.name }}</option>
         {% endfor %}
     `;
 
@@ -124,14 +118,13 @@ function handlePoolChange(selectElement, assignmentId) {
         prefixSelect.required = true;
 
         const [poolId, poolAfi, poolPrefix] = poolSelect.value.split('_');
-        const startPrefix = parseInt(poolPrefix, 10);
-        const endPrefix = poolAfi === 'ipv4' ? 32 : 128;
+        const prefixes = poolAfi === 'ipv4' ? [29, 27] : [64, 56];
 
         prefixSelect.innerHTML = ''; // Clear existing options
-        for (let i = startPrefix; i <= endPrefix; i++) {
+        for (const prefix of prefixes) {
             const option = document.createElement('option');
-            option.value = i;
-            option.textContent = i;
+            option.value = prefix;
+            option.textContent = `/${prefix}`;
             prefixSelect.appendChild(option);
         }
     } else {

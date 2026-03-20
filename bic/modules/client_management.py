@@ -104,7 +104,7 @@ def provision_new_client(db_core: BIC_DB, client_name: str, client_email: str, c
 
     for i in range(len(assignment_pool_ids)):
         if i < len(assignment_types) and assignment_pool_ids[i]:
-            pool_id = int(assignment_pool_ids[i])
+            pool_id = int(assignment_pool_ids[i].split('_')[0])
             assign_type = assignment_types[i]
             if assign_type == 'static':
                 ip = network_management.get_next_available_ip_in_pool(db_core, pool_id)

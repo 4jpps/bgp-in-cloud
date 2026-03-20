@@ -88,6 +88,8 @@ async def render_page(request: Request, path: str, db: BIC_DB = Depends(get_db))
                     if field.type == "select" and field.options_loader:
                         field.options = field.options_loader(db)
         context["fields"] = ui_item.item.form_fields
+        # Also pass pools for the dynamic assignment form
+        context["pools"] = db.find_all("ip_pools")
         return templates.TemplateResponse("generic_form.html", context)
 
     raise HTTPException(status_code=404, detail="Invalid page type")

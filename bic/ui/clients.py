@@ -4,16 +4,7 @@ from bic.core import BIC_DB
 
 def get_ip_pool_options(db_core: BIC_DB):
     pools = db_core.find_all("ip_pools")
-    options = []
-    for p in pools:
-        try:
-            prefix = p['cidr'].split('/')[1]
-            label = p.get('description') or p['name']
-            value = f"{p['id']}_{p['afi']}_{prefix}"
-            options.append(FormSelectOption(label=label, value=value))
-        except IndexError:
-            continue # Skip pools with invalid CIDR format
-    return options
+    return [FormSelectOption(label=p['name'], value=p['id']) for p in pools]
 
 def get_client_type_options(db_core: BIC_DB):
     # In the future, this could come from a dedicated table

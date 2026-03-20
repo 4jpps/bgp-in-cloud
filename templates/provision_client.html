@@ -105,14 +105,13 @@ function handlePoolChange(selectElement, assignmentId) {
         prefixSelect.required = true;
 
         const [poolId, poolAfi, poolPrefix] = poolSelect.value.split('_');
-        const startPrefix = parseInt(poolPrefix, 10);
-        const endPrefix = poolAfi === 'ipv4' ? 32 : 128;
+        const prefixes = poolAfi === 'ipv4' ? [29, 27] : [64, 56];
 
         prefixSelect.innerHTML = ''; // Clear existing options
-        for (let i = startPrefix; i <= endPrefix; i++) {
+        for (const prefix of prefixes) {
             const option = document.createElement('option');
-            option.value = i;
-            option.textContent = i;
+            option.value = prefix;
+            option.textContent = `/${prefix}`;
             prefixSelect.appendChild(option);
         }
     } else {

@@ -90,10 +90,10 @@ class BIC_DB:
     def __init__(self, db_path: str = "bic.db", base_dir: str = None):
         self.db_path = Path(base_dir or ".") / db_path
         self.conn = get_db_connection(self.db_path)
-        self._run_migrations()
+        # Migrations are now handled by init_db.py
 
-    def _run_migrations(self):
-        """Initializes the database schema."""
+    def run_migrations(self):
+        """Initializes the database schema. Should be run from init_db.py."""
         try:
             with self.conn:
                 cursor = self.conn.cursor()

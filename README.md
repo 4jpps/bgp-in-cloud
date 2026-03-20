@@ -20,7 +20,13 @@ This project is a comprehensive IP Address Management (IPAM) and BGP orchestrati
     pip install -r requirements.txt
     ```
 
-2.  **Configuration:**
+2.  **Initialize the Database:**
+
+    ```bash
+    python init_db.py
+    ```
+
+3.  **Configuration:**
 
     -   Copy `.env.example` to `.env` and customize the settings.
     -   Set `YUBICO_CLIENT_ID` and `YUBICO_SECRET_KEY` in your environment if you plan to use the YubiKey integration.

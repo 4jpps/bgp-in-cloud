@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1413
+
+-   **Architecture:** Decoupled database initialization from application startup to resolve critical race conditions and `ValueError` on first run. A new `init_db.py` script now handles initial setup.
+
 ## Version 2026.03.20.1404
 
 -   **Bugfix:** Corrected the password hashing function to properly handle byte truncation and prevent a `ValueError` during `passlib` initialization.

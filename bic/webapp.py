@@ -119,14 +119,17 @@ async def get_current_user_optional(request: Request, db: BIC_DB = Depends(get_d
     if not token:
         return None
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        secret_key = system_management.get_secret_key(db)
+        algorithm = system_management.get_jwt_algorithm(db)
+        payload = jwt.decode(token, secret_key, algorithms=[algorithm])
         username: str = payload.get("sub")
         if username is None:
             return None
-        user = await asyncio.to_thread(db.find_one, "users", {"username": username})
-        return user
     except JWTError:
         return None
+
+    user = await asyncio.to_thread(db.find_one, "users", {"username": username})
+    return user
 
 # --- UI Navigation Helper ---
 def find_ui_item_by_path(request_path: str, request: Request, menu: UIMenu = menu_structure, parent_role: str = None) -> UIMenuItem | None:

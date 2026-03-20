@@ -14,7 +14,14 @@ This project is a comprehensive IP Address Management (IPAM) and BGP orchestrati
 
 ## Getting Started
 
-1.  **Installation:**
+1.  **Clone the Repository:**
+
+    ```bash
+    git clone https://github.com/4jpps/bgp-in-cloud.git
+    cd bgp-in-cloud
+    ```
+
+2.  **Installation:**
 
     ```bash
     pip install -r requirements.txt

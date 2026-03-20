@@ -7,6 +7,7 @@ It defines all the routes, middleware, and application logic for the web UI.
 
 import inspect
 import asyncio
+import os
 from contextlib import asynccontextmanager
 from datetime import datetime
 from pathlib import Path

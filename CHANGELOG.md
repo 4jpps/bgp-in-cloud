@@ -1,6 +1,12 @@
 # Changelog
 
+## Version 2026.03.20.1332
+
+-   **Bugfix:** Fixed a `NameError` on startup caused by a missing `os` import in `bic/webapp.py`.
+
 ## Version 2026.03.20.1327
+
+-  **INITIAL RELEASE**
 
 -   **Advanced Authentication:** Implemented Passkey (WebAuthn), YubiKey, and Google Authenticator support for enhanced security.
 -   **IPAM Enhancements:** Updated the IPAM allocator with block-alignment and gap-search strategies for more efficient IP address management.

@@ -73,7 +73,7 @@ app.add_exception_handler(RateLimitExceeded, _rate_limit_exceeded_handler)
 
 BASE_DIR = Path(__file__).resolve().parent
 
-# Mount static files
+# Mount the main static directory
 app.mount("/static", StaticFiles(directory=str(BASE_DIR.parent / "static")), name="static")
 
 # Setup Jinja2 templates

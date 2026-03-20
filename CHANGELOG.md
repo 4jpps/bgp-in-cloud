@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 2026.03.20.1444
+
+-   **Bugfix:** Added the missing `python-multipart` dependency to resolve form parsing errors.
+-   **Bugfix:** Corrected the static file path to fix broken UI styling.
+
 ## Version 2026.03.20.1439
 
 -   **Bugfix:** Corrected the UI routing configuration to resolve a `404 Not Found` error on the login page.

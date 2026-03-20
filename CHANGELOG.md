@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1353
+
+-   **Bugfix:** Restored the `get_all_settings` function, fixing a startup error caused by a missing UI loader function.
+
 ## Version 2026.03.20.1349
 
 -   **Bugfix:** Restored the `save_all_settings` function, which was causing a startup error due to a missing attribute in the system management module.

@@ -31,6 +31,14 @@ def get_token_expire_minutes(db_core: BIC_DB) -> int:
     """Retrieves the JWT expiration time in minutes, defaulting to 30."""
     return int(db_core.get_setting('ACCESS_TOKEN_EXPIRE_MINUTES', 30))
 
+def get_all_settings(db_core: BIC_DB, **kwargs) -> dict:
+    """Retrieves all settings from the database and returns them as a dictionary."""
+    settings_list = db_core.find_all('settings')
+    settings_dict = {setting['key']: setting['value'] for setting in settings_list}
+    log.info(f"Loaded {len(settings_dict)} settings from the database.")
+    return settings_dict
+
+
 def save_all_settings(db_core: BIC_DB, **kwargs):
     """Iterates through kwargs and saves each as a setting in the database."""
     log.info("Saving all system settings.")

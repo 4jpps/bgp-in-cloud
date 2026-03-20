@@ -192,6 +192,13 @@ class BIC_DB:
             self.conn.execute("PRAGMA user_version = 9")
             self.conn.commit()
             user_version = 9
+        
+        if user_version < 10:
+            # Version 10: Update transit pool CIDR
+            self.conn.execute("UPDATE ip_pools SET cidr = '172.31.0.0/23' WHERE name = 'WG Server P2P IPv4'")
+            self.conn.execute("PRAGMA user_version = 10")
+            self.conn.commit()
+            user_version = 10
 
     def create_table_if_not_exists(self, table_name, columns):
         query = f"CREATE TABLE IF NOT EXISTS {table_name} ({ ', '.join(columns)})"
@@ -272,12 +279,9 @@ class BIC_DB:
     def _seed_initial_data(self):
         """Seeds the database with essential data like system IP pools if they don't exist."""
         initial_pools = [
-            {"name": "WG Server P2P IPv4", "cidr": "172.31.0.0/24", "description": "WireGuard server point-to-point network (IPv4)", "afi": "ipv4"},
+            {"name": "WG Server P2P IPv4", "cidr": "172.31.0.0/23", "description": "WireGuard server point-to-point network (IPv4)", "afi": "ipv4"},
             {"name": "WG Server P2P IPv6", "cidr": "fd31::/64", "description": "WireGuard server point-to-point network (IPv6)", "afi": "ipv6"},
         ]
 
         for pool in initial_pools:
-            existing = self.find_one('ip_pools', {'name': pool['name']})
-            if not existing:
-                self.insert('ip_pools', pool)
-                print(f"Seeded initial IP Pool: {pool['name']}")
+            self.insert_or_replace('ip_pools', pool)

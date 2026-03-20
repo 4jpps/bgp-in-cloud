@@ -5,45 +5,22 @@ from bic.modules import bgp_management, wireguard_management, network_management
 
 def regenerate_client_configs(db_core: BIC_DB, client_id: int):
     """Re-generates and saves the WireGuard and BGP configs for a given client."""
+    wireguard_management.update_wireguard_config_for_client(db_core, client_id)
     client = db_core.find_one("clients", {"id": client_id})
-    if not client:
-        return
-
-    # Rebuild AllowedIPs for the WireGuard peer
-    wg_peer = db_core.find_one('wireguard_peers', {'client_id': client_id})
-    if wg_peer:
-        wireguard_management.rebuild_and_update_peer_allowed_ips(db_core, client_id)
-
-        # Regenerate the client's WireGuard config file content
-        # This requires fetching all the pieces again
-        server_interface = db_core.find_one('wireguard_interfaces', {'id': wg_peer['interface_id']})
-        client_allocations = db_core.find_all_by('ip_allocations', {'client_id': client_id})
-        client_tunnel_ips = [f"{a['ip_address']}/{'128' if ':' in a['ip_address'] else '32'}" for a in client_allocations]
-
-        # This part is a bit tricky as the private key is not stored. 
-        # For a true regen, we would need to issue a new key. 
-        # For now, we will assume the main part that changes is the Endpoint/AllowedIPs
-        # A better approach would be to store the client private key encrypted.
-        # For this re-gen, we will just update the existing conf string if possible.
-        current_conf = client.get("wireguard_conf", "")
-        # This is a placeholder for a more complex update.
-        # In a real scenario, you'd parse the conf and replace lines.
-
-    # Regenerate BGP config
-    if client.get("asn"):
+    if client and client.get("asn"):
         bgp_conf_content = bgp_management.create_client_bgp_config(db_core, client)
         if bgp_conf_content:
             db_core.update('clients', client_id, {'bgp_conf': bgp_conf_content})
-
-    # Send the welcome email with all configs
+    
     from bic.modules.email_notifications import send_client_welcome_email
     send_client_welcome_email(db_core, client_id)
-
     return {"success": True, "client_id": client_id}
 
 def update_client_details(db_core: BIC_DB, client_id: int, new_name: str, new_email: str, new_type: str):
     """Updates a client's name, email, and type."""
     db_core.update('clients', client_id, {'name': new_name, 'email': new_email, 'type': new_type})
+    # After updating details, it's good practice to regenerate configs
+    regenerate_client_configs(db_core, client_id)
     return {"success": True, "message": "Client details updated."}
 
 def edit_client_from_form(db_core: BIC_DB, id: int, name: str, email: str, type: str):
@@ -56,8 +33,12 @@ def deprovision_and_delete_client(db_core: BIC_DB, client_id: int):
     db_core.conn.execute("DELETE FROM ip_allocations WHERE client_id = ?", (client_id,))
     # Deallocate all subnets
     db_core.conn.execute("DELETE FROM ip_subnets WHERE client_id = ?", (client_id,))
-    # Delete WireGuard peer
-    db_core.conn.execute("DELETE FROM wireguard_peers WHERE client_id = ?", (client_id,))
+    # Get the peer before deleting it to find the interface
+    peer = db_core.find_one('wireguard_peers', {'client_id': client_id})
+    if peer:
+        db_core.delete('wireguard_peers', peer['id'])
+        # Update the server config after removing the peer
+        wireguard_management.write_server_config_from_db(db_core, peer['interface_id'])
     # Delete the client
     db_core.delete("clients", client_id)
     db_core.conn.commit()
@@ -69,7 +50,6 @@ def delete_client_from_form(db_core: BIC_DB, id: int, **kwargs):
 
 def provision_new_client(db_core: BIC_DB, client_name: str, client_email: str, client_type: str, asn: Optional[int] = None, assignments: Optional[list] = None, **form_data):
     """Provisions a new client with the given details and IP assignments."""
-    # Handle web form data if assignments not provided
     if assignments is None:
         assignments = []
         # Parse form data for assignments
@@ -77,7 +57,6 @@ def provision_new_client(db_core: BIC_DB, client_name: str, client_email: str, c
         assignment_types = form_data.get('assignment_type', [])
         assignment_prefixes = form_data.get('assignment_prefix', [])
         
-        # Ensure they are lists
         if not isinstance(assignment_pool_ids, list):
             assignment_pool_ids = [assignment_pool_ids]
         if not isinstance(assignment_types, list):
@@ -86,65 +65,41 @@ def provision_new_client(db_core: BIC_DB, client_name: str, client_email: str, c
             assignment_prefixes = [assignment_prefixes]
         
         for i in range(len(assignment_pool_ids)):
-            if i < len(assignment_types):
-                assignment = {
-                    "pool_id": int(assignment_pool_ids[i]),
-                    "type": assignment_types[i]
-                }
+            if i < len(assignment_types) and assignment_pool_ids[i]:
+                assignment = {"pool_id": int(assignment_pool_ids[i]), "type": assignment_types[i]}
                 if assignment_types[i] == 'subnet' and i < len(assignment_prefixes):
                     assignment["prefix_len"] = int(assignment_prefixes[i])
                 assignments.append(assignment)
     
-    # Create the client record
-    client_data = {
-        "name": client_name,
-        "email": client_email,
-        "type": client_type,
-    }
+    client_data = {"name": client_name, "email": client_email, "type": client_type}
     if asn:
         client_data["asn"] = asn
     
     client_id = db_core.insert("clients", client_data)
     
-    # Process IP assignments
+    # Auto-allocate transit IPs
+    v4_transit_pool = db_core.find_one('ip_pools', {'name': 'WG Server P2P IPv4'})
+    v6_transit_pool = db_core.find_one('ip_pools', {'name': 'WG Server P2P IPv6'})
+    if v4_transit_pool:
+        ipv4 = network_management.get_next_available_ip_in_pool(db_core, v4_transit_pool['id'])
+        if ipv4:
+            db_core.insert('ip_allocations', {'pool_id': v4_transit_pool['id'], 'client_id': client_id, 'ip_address': ipv4, 'description': 'Transit P2P IPv4'})
+    if v6_transit_pool:
+        ipv6 = network_management.get_next_available_ip_in_pool(db_core, v6_transit_pool['id'])
+        if ipv6:
+            db_core.insert('ip_allocations', {'pool_id': v6_transit_pool['id'], 'client_id': client_id, 'ip_address': ipv6, 'description': 'Transit P2P IPv6'})
+
+    # Process other IP assignments
     for assignment in assignments:
-        pool = db_core.find_one("ip_pools", {"id": assignment["pool_id"]})
-        if not pool:
-            continue
-            
         if assignment["type"] == "static":
-            # Allocate a single IP
             ip_address = network_management.get_next_available_ip_in_pool(db_core, assignment["pool_id"])
             if ip_address:
-                db_core.insert('ip_allocations', {
-                    'pool_id': assignment["pool_id"],
-                    'client_id': client_id,
-                    'ip_address': ip_address,
-                    'description': f"Static IP for {client_name}"
-                })
+                db_core.insert('ip_allocations', {'pool_id': assignment["pool_id"], 'client_id': client_id, 'ip_address': ip_address, 'description': f"Static IP for {client_name}"})
         elif assignment["type"] == "subnet":
-            # Allocate a subnet
             prefix_len = assignment.get("prefix_len", 32)
-            subnet, subnet_id = network_management.find_and_allocate_subnet(db_core, assignment["pool_id"], prefix_len)
-            if subnet and subnet_id:
-                db_core.update('ip_subnets', subnet_id, {
-                    'client_id': client_id,
-                    'description': f"Subnet /{prefix_len} for {client_name}"
-                })
-    
-    # Generate WireGuard configuration
-    # wireguard_management.setup_client_wireguard(db_core, client_id)  # TODO: implement
-    
-    # Generate BGP configuration if applicable
-    if asn:
-        bgp_conf = bgp_management.create_client_bgp_config(db_core, {"id": client_id, "name": client_name, "asn": asn})
-        if bgp_conf:
-            db_core.update("clients", client_id, {"bgp_conf": bgp_conf})
-    
-    # Send welcome email
-    from bic.modules.email_notifications import send_client_welcome_email
-    send_client_welcome_email(db_core, client_id)
+            subnet, msg = network_management.allocate_next_available_subnet(db_core, assignment["pool_id"], prefix_len, client_id, f"Subnet for {client_name}")
+
+    # Generate all configs
+    regenerate_client_configs(db_core, client_id)
     
     return {"success": True, "client_id": client_id}
-
-# --- Other client management functions are omitted for brevity ---

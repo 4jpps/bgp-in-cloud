@@ -1,4 +1,3 @@
-
 import subprocess
 import os
 from rich.console import Console
@@ -9,7 +8,6 @@ console = Console()
 
 WG_CONF_DIR = "/etc/wireguard/"
 BIC_CLIENT_CONF_DIR = os.path.join(os.path.expanduser("~"), ".bic", "client_confs")
-
 
 def generate_keys():
     """Generates a new WireGuard private and public key pair."""
@@ -36,7 +34,7 @@ def write_server_config_from_db(db_core: BIC_DB, interface_id: int):
 
     peers = db_core.find_all_by('wireguard_peers', {'interface_id': interface_id})
     for peer in peers:
-        content += "\n# Peer: {peer['name']}\n"
+        content += f"\n# Peer: {peer['name']}\n"
         content += "[Peer]\n"
         content += f"PublicKey = {peer['public_key']}\n"
         content += f"AllowedIPs = {peer['allowed_ips']}\n"
@@ -54,42 +52,69 @@ def write_server_config_from_db(db_core: BIC_DB, interface_id: int):
         console.print(f"[bold red]Failed to write WireGuard config {conf_path}: {e}[/bold red]")
         return None
 
-def add_peer_to_interface(db_core: BIC_DB, server_interface_id: int, client_id: int, peer_name: str, peer_public_key: str, peer_allowed_ips: str, client_private_key: str, client_address: str):
-    """Adds a peer to the DB and rewrites the server config."""
-    server_interface = db_core.find_one('wireguard_interfaces', {'id': server_interface_id})
+def update_wireguard_config_for_client(db_core: BIC_DB, client_id: int):
+    """The single source of truth for creating and updating a client's WireGuard config."""
+    client = db_core.find_one("clients", {"id": client_id})
+    if not client:
+        return {"success": False, "message": "Client not found."}
+
+    server_interface = ensure_server_interface(db_core)
     if not server_interface:
-        return None, None
+        return {"success": False, "message": "Could not ensure WireGuard server interface."}
 
-    peer_id = db_core.insert('wireguard_peers', {
-        'interface_id': server_interface_id,
-        'client_id': client_id,
-        'name': peer_name,
-        'public_key': peer_public_key,
-        'allowed_ips': peer_allowed_ips,
-    })
+    # Calculate AllowedIPs
+    single_ips = db_core.find_all_by('ip_allocations', {'client_id': client_id})
+    subnets = db_core.find_all_by('ip_subnets', {'client_id': client_id})
+    allowed_ips_list = [f"{alloc['ip_address']}/{128 if ':' in alloc['ip_address'] else 32}" for alloc in single_ips]
+    allowed_ips_list.extend([s['subnet'] for s in subnets])
+    allowed_ips_str = ", ".join(allowed_ips_list)
 
-    # Rewrite the server config to add the new peer
-    write_server_config_from_db(db_core, server_interface_id)
+    # Find or create peer
+    peer = db_core.find_one('wireguard_peers', {'client_id': client_id})
+    if peer:
+        # Update existing peer
+        db_core.update('wireguard_peers', peer['id'], {'allowed_ips': allowed_ips_str})
+        client_private_key = db_core.get_setting(f"wg_client_{client_id}_privkey") # Assumes we store this
+    else:
+        # Create new peer
+        keys = generate_keys()
+        if not keys:
+            return {"success": False, "message": "Failed to generate WireGuard keys."}
+        
+        peer_id = db_core.insert('wireguard_peers', {
+            'interface_id': server_interface['id'],
+            'client_id': client_id,
+            'name': client['name'],
+            'public_key': keys['public_key'],
+            'allowed_ips': allowed_ips_str,
+        })
+        client_private_key = keys['private_key']
+        # Store the private key securely
+        db_core.insert_or_replace('settings', {'key': f"wg_client_{client_id}_privkey", 'value': client_private_key})
 
-    # Generate client config content to be returned
+    # Generate client config content
     all_settings = {s['key']: s['value'] for s in db_core.find_all('settings')}
     dns_v4 = all_settings.get('dns_server_ipv4', '1.1.1.1')
     dns_v6 = all_settings.get('dns_server_ipv6', '2606:4700:4700::1111')
     wg_endpoint = all_settings.get('wg_server_endpoint', 'your-server.example.com')
+    client_p2p_ips = [f"{alloc['ip_address']}/{128 if ':' in alloc['ip_address'] else 32}" for alloc in single_ips if 'P2P' in alloc.get('description', '')]
 
     client_conf = "[Interface]\n"
     client_conf += f"PrivateKey = {client_private_key}\n"
-    client_conf += f"Address = {client_address}\n"
+    client_conf += f"Address = {', '.join(client_p2p_ips)}\n"
     client_conf += f"DNS = {dns_v4}, {dns_v6}\n\n"
-
     client_conf += "[Peer]\n"
     client_conf += f"PublicKey = {server_interface['public_key']}\n"
     client_conf += f"Endpoint = {wg_endpoint}:{server_interface['listen_port']}\n"
-    # Route all traffic through the VPN
     client_conf += "AllowedIPs = 0.0.0.0/0, ::/0\n"
     client_conf += "PersistentKeepalive = 25\n"
 
-    return client_conf, peer_id
+    db_core.update('clients', client_id, {'wireguard_conf': client_conf})
+
+    # Rewrite the server config to add/update the peer
+    write_server_config_from_db(db_core, server_interface['id'])
+    
+    return {"success": True, "message": "WireGuard configuration updated."}
 
 def remove_peer_from_interface(db_core: BIC_DB, peer_id: int):
     """Removes a peer from the DB and rewrites the server config."""
@@ -116,8 +141,8 @@ def ensure_server_interface(db_core: BIC_DB):
         return None
 
     # Get server P2P addresses from the special pools
-    v4_pool = db_core.find_one_by('ip_pools', {'name': 'WG Server P2P IPv4'})
-    v6_pool = db_core.find_one_by('ip_pools', {'name': 'WG Server P2P IPv6'})
+    v4_pool = db_core.find_one('ip_pools', {'name': 'WG Server P2P IPv4'})
+    v6_pool = db_core.find_one('ip_pools', {'name': 'WG Server P2P IPv6'})
     
     v4_net = ipaddress.ip_network(v4_pool['cidr'])
     v6_net = ipaddress.ip_network(v6_pool['cidr'])
@@ -127,7 +152,7 @@ def ensure_server_interface(db_core: BIC_DB):
 
     interface_id = db_core.insert('wireguard_interfaces', {
         'name': 'wg1',
-        'listen_port': 51820,
+        'listen_port': 51821, # Your specified port
         'address': f"{server_v4}/{v4_net.prefixlen}, {server_v6}/{v6_net.prefixlen}",
         'private_key': keys['private_key'],
         'public_key': keys['public_key']
@@ -136,36 +161,8 @@ def ensure_server_interface(db_core: BIC_DB):
 
 def rebuild_and_update_peer_allowed_ips(db_core: BIC_DB, client_id: int):
     """Recalculates a client's AllowedIPs and updates the WG config."""
-    peer = db_core.find_one('wireguard_peers', {'client_id': client_id})
-    if not peer:
-        return {"success": False, "message": "WireGuard peer not found for this client."}
-
-    single_ips = db_core.find_all_by('ip_allocations', {'client_id': client_id})
-    subnets = db_core.find_all_by('ip_subnets', {'client_id': client_id})
-
-    allowed_ips_list = []
-    # Add P2P transit IPs
-    for alloc in single_ips:
-        ip = alloc['ip_address']
-        pool = db_core.find_one('ip_pools', {'id': alloc['pool_id']})
-        if 'Transit' in pool.get('name', ''):
-            if ':' in ip: # is ipv6
-                allowed_ips_list.append(f"{ip}/128")
-            else:
-                allowed_ips_list.append(f"{ip}/32")
-    
-    # Add assigned service subnets
-    for sub in subnets:
-        allowed_ips_list.append(sub['subnet'])
-
-    allowed_ips_str = ",".join(allowed_ips_list)
-    
-    db_core.update('wireguard_peers', peer['id'], {'allowed_ips': allowed_ips_str})
-
-    # Rewrite server config to apply the change
-    write_server_config_from_db(db_core, peer['interface_id'])
-    
-    return {"success": True, "message": "WireGuard peer AllowedIPs updated."}
+    # This function is now superseded by update_wireguard_config_for_client
+    return update_wireguard_config_for_client(db_core, client_id)
 
 def list_peers_joined(db_core: BIC_DB):
     """Lists all WireGuard peers with client and interface info."""
@@ -180,4 +177,3 @@ def list_peers_joined(db_core: BIC_DB):
     """
     rows = db_core.conn.execute(query).fetchall()
     return [dict(row) for row in rows]
-

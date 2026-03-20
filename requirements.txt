@@ -12,6 +12,5 @@ cbor
 yubico-client
 pyotp
 qrcode
-passlib
 bcrypt>=3.2.0
 zxcvbn

@@ -211,7 +211,7 @@ def update_user(db_core: BIC_DB, id: str, username: str, email: str, role: str, 
     
     db_core.update("users", id, update_data)
     actor_id = user['id'] if user else None
-    add_audit_log(db_core, user_id=actor_id, action="update_user", details=f"Updated user {username} (ID: {id})")
+    add__audit_log(db_core, user_id=actor_id, action="update_user", details=f"Updated user {username} (ID: {id})")
 
 def delete_user(db_core: BIC_DB, id: str, user: dict = None, **kwargs):
     """Deletes a user from the system.
@@ -231,4 +231,3 @@ def delete_user(db_core: BIC_DB, id: str, user: dict = None, **kwargs):
     db_core.delete("users", id)
     actor_id = user['id'] if user else None
     add_audit_log(db_core, user_id=actor_id, action="delete_user", details=f"Deleted user {deleted_user['username']} (ID: {id})")
-

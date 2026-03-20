@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 2026.03.20.1511
+
+-   **UI/UX:** Overhauled the main layout to use a horizontal navigation bar with dropdown menus.
+-   **UI/UX:** Corrected the update notification to ensure it always renders as a proper toast.
+
 ## Version 2026.03.20.1507
 
 -   **Bugfix:** Fixed the "Edit User" page by correctly loading and pre-selecting the user's role in the dropdown.

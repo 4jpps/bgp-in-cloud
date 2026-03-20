@@ -147,7 +147,7 @@ async def remove_assignment(assignment_type: str, assignment_id: int, client_id:
     return RedirectResponse(url=f"/page/clients/edit?id={client_id}", status_code=303)
 
 @app.get("/clients/configs/{client_id}", response_class=HTMLResponse)
-async def view_client_configs(request: Request, client_id: int, db: BIC_DB = Depends(get_db)):
+async def view_client_configs(request: Request, client_id: str, db: BIC_DB = Depends(get_db)):
     settings = system_management.get_all_settings(db)
     client = db.find_one("clients", {"id": client_id})
     if not client:

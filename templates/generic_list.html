@@ -25,11 +25,7 @@
                 {% if view.actions %}
                     <td>
                         {% for action in view.actions %}
-                            {% if action.name == "View Configs" %}
-                                <a href="{{ url_for('view_client_configs', client_id=item.id) }}" class="action-button">{{ action.name }}</a>
-                            {% else %}
-                                <a href="{{ url_for('render_page', path=action.path.lstrip('/')) }}?id={{ item.id }}" class="action-button">{{ action.name }}</a>
-                            {% endif %}
+                            <a href="{{ url_for('render_page', path=action.path.lstrip('/')) }}?id={{ item.id }}" class="action-button">{{ action.name }}</a>
                         {% endfor %}
                     </td>
                 {% endif %}

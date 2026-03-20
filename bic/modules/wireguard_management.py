@@ -106,7 +106,13 @@ def update_wireguard_config_for_client(db_core: BIC_DB, client_id: int):
     client_conf += "[Peer]\n"
     client_conf += f"PublicKey = {server_interface['public_key']}\n"
     client_conf += f"Endpoint = {wg_endpoint}:{server_interface['listen_port']}\n"
-    client_conf += "AllowedIPs = 0.0.0.0/0, ::/0\n"
+
+    if client.get('type') == 'Transit':
+        allowed_ips_parts = client_p2p_ips + ['0.0.0.0/0', '::/0']
+        client_conf += f"AllowedIPs = {', '.join(allowed_ips_parts)}\n"
+    else: # Standard client
+        client_conf += "AllowedIPs = 0.0.0.0/0, ::/0\n"
+
     client_conf += "PersistentKeepalive = 25\n"
 
     db_core.update('clients', client_id, {'wireguard_conf': client_conf})

@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1404
+
+-   **Bugfix:** Corrected the password hashing function to properly handle byte truncation and prevent a `ValueError` during `passlib` initialization.
+
 ## Version 2026.03.20.1400
 
 -   **Bugfix:** Completed a comprehensive audit and refactoring of UI handlers to resolve all module-related `AttributeError` issues at startup. Consolidated audit log and backup functions into the `system_management` module.

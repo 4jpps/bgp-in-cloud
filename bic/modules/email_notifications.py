@@ -2,7 +2,6 @@ import smtplib
 from email.message import EmailMessage
 from rich.console import Console
 from bic.core import BIC_DB
-from bic.modules import bgp_management
 
 console = Console()
 
@@ -28,11 +27,7 @@ def send_client_welcome_email(db_core: BIC_DB, client_id: int):
 
 Welcome to BGP in the Cloud!
 
-Your configuration files are attached to this email. Please find:
-
-- wireguard.conf: For your WireGuard client.
-- client_bird.conf: An example BIRD configuration for your BGP session.
-- frr.conf: An example FRRouting configuration for your BGP session.
+Your configuration file(s) are attached to this email.
 
 Thank you,
 {from_name}
@@ -49,17 +44,15 @@ Thank you,
     if wg_conf:
         msg.add_attachment(wg_conf, filename="wireguard.conf")
 
+    # Attach BGP configs only if the client is a Transit type
+    if client.get('type') == 'Transit':
+        frr_conf = client.get('bgp_frr_conf')
+        if frr_conf:
+            msg.add_attachment(frr_conf, filename="frr.conf")
 
-    
-    # Attachment 3: FRR Config (client side)
-    frr_conf = bgp_management.create_client_frr_config(db_core, client)
-    if frr_conf:
-        msg.add_attachment(frr_conf, filename="frr.conf")
-
-    # Attachment 4: Client-side BIRD Config
-    client_bird_conf = bgp_management.create_client_bird_config(db_core, client)
-    if client_bird_conf:
-        msg.add_attachment(client_bird_conf, filename="client_bird.conf")
+        bird_conf = client.get('bgp_bird_conf')
+        if bird_conf:
+            msg.add_attachment(bird_conf, filename="client_bird.conf")
 
     try:
         with smtplib.SMTP(settings['smtp_server'], int(settings['smtp_port'])) as server:
@@ -68,8 +61,7 @@ Thank you,
             server.send_message(msg)
         
         console.print(f"[blue]✉️  Welcome email with all configs successfully sent to {client['email']}[/blue]")
-        # Optionally log this to the database
-        db_core.insert('email_log', {"client_id": client_id, "subject": subject, "body": "Welcome email with configs sent."})        
+        db_core.insert('email_log', {"client_id": client_id, "subject": subject, "body": "Welcome email with configs sent."})
 
     except Exception as e:
         console.print(f"[bold red]Failed to send welcome email: {e}[/bold red]")

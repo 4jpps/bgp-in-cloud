@@ -3,46 +3,78 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}BGP in Cloud{% endblock %}</title>
+    <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
     <meta name="google" content="notranslate">
-    <title>{% block title %}{{ settings.branding_company_name | default('BIC IPAM') }}{% endblock %}</title>
-    <link href="{{ url_for('static', path='/style.css') }}" rel="stylesheet">
 </head>
-<body class="bg-gray-100 text-gray-800">
-
-    <nav class="navbar">
-        <a href="/" class="nav-brand">{{ settings.branding_company_name | default('BIC IPAM') }}</a>
-        <div class="nav-links">
-            {% for item in menu.items %}
-                {% if not item.hidden %}
-                    {% if item.item and item.item.items %}
-                        <div class="nav-dropdown">
-                            <button class="nav-button">{{ item.name }}</button>
-                            <div class="dropdown-content">
-                                {% for sub_item in item.item.items %}
-                                    {% if not sub_item.hidden %}
-                                    <a href="{{ url_for('render_page', path=sub_item.path.lstrip('/')) }}">{{ sub_item.name }}</a>
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-                        </div>
-                    {% elif item.path %}
-                        <a href="{{ url_for('render_page', path=item.path.lstrip('/')) if item.path != '/' else '/' }}" class="nav-button-link">
-                            {{ item.name }}
-                        </a>
-                    {% endif %}
-                {% endif %}
-            {% endfor %}
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
+    <!-- Update Notification Toast -->
+    <div id="update-toast" class="hidden fixed top-5 right-5 bg-blue-500 text-white p-4 rounded-lg shadow-lg z-50">
+        <p>A new version is available! <strong id="new-version-text"></strong></p>
+        <div class="mt-2">
+            <button onclick="showChangelog()" class="action-button-sm">View Changelog</button>
+            <a href="https://github.com/4jpps/bgp-in-cloud/releases" target="_blank" class="action-button-green-sm">Update Now</a>
+            <button onclick="dismissToast()" class="action-button-red-sm">Dismiss</button>
         </div>
-    </nav>
+    </div>
 
-    <main class="container mx-auto p-4">
-        {% block content %}{% endblock %}
-    </main>
+    <!-- Changelog Modal -->
+    <div id="changelog-modal" class="hidden fixed inset-0 bg-gray-800 bg-opacity-75 flex items-center justify-center z-40">
+        <div class="bg-white dark:bg-gray-800 p-6 rounded-lg shadow-xl w-full max-w-2xl">
+            <h2 class="text-2xl font-bold mb-4">Changelog</h2>
+            <div id="changelog-content" class="prose dark:prose-invert max-h-96 overflow-y-auto"></div>
+            <div class="mt-6 text-right">
+                <button onclick="closeModal()" class="action-button">Close</button>
+            </div>
+        </div>
+    </div>
 
-    <footer class="footer">
-        Copyright &copy; {{ "now" | strftime("%Y") }} {{ settings.branding_company_name | default('Your Company') }}. 
-        Version: {{ version }}
-    </footer>
+    <div class="flex h-screen">
+        <!-- Sidebar -->
+        <div class="w-64 bg-white dark:bg-gray-800 p-4 flex flex-col">
+            <h1 class="text-2xl font-bold mb-6">{{ settings.get('branding_company_name', 'Jeff Parrish PC Services') }}</h1>
+            <nav>
+                <ul>
+                    {% for item in menu.items %}
+                        <li class="mb-2"><a href="/page{{ item.path }}" class="hover:text-blue-500">{{ item.name }}</a></li>
+                    {% endfor %}
+                </ul>
+            </nav>
+            <div class="mt-auto text-sm text-gray-500">
+                <p>Copyright &copy; {% now 'utc', '%Y' %} {{ settings.get('branding_company_name', 'Jeff Parrish PC Services') }}. Version: {{ version }}</p>
+            </div>
+        </div>
 
+        <!-- Main Content -->
+        <main class="flex-1 p-6 overflow-y-auto">
+            {% block content %}{% endblock %}
+        </main>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/check-update')
+                .then(response => response.json())
+                .then(data => {
+                    if (data.update_available) {
+                        document.getElementById('new-version-text').textContent = data.new_version;
+                        document.getElementById('changelog-content').innerHTML = data.changelog;
+                        document.getElementById('update-toast').classList.remove('hidden');
+                    }
+                });
+        });
+
+        function showChangelog() {
+            document.getElementById('changelog-modal').classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('changelog-modal').classList.add('hidden');
+        }
+
+        function dismissToast() {
+            document.getElementById('update-toast').classList.add('hidden');
+        }
+    </script>
 </body>
 </html>

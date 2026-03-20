@@ -1,21 +1,13 @@
 import subprocess
 import os
 from rich.console import Console
-from bic.core import BIC_DB, get_wan_interface
+from bic.core import BIC_DB, get_wan_interface, get_wan_ip
 import ipaddress
 
 console = Console()
 
 WG_CONF_DIR = "/etc/wireguard/"
 BIC_CLIENT_CONF_DIR = os.path.join(os.path.expanduser("~"), ".bic", "client_confs")
-
-def _get_public_ip():
-    """Gets the server's public IP address."""
-    try:
-        return subprocess.check_output(["curl", "-s", "ifconfig.me"], text=True).strip()
-    except Exception as e:
-        console.print(f"[yellow]Warning: Could not determine public IP: {e}. Defaulting to localhost.[/yellow]")
-        return "127.0.0.1"
 
 def generate_keys():
     """Generates a new WireGuard private and public key pair."""
@@ -107,7 +99,7 @@ def update_wireguard_config_for_client(db_core: BIC_DB, client_id: int):
     all_settings = {s['key']: s['value'] for s in db_core.find_all('settings')}
     dns_v4 = all_settings.get('dns_server_ipv4', '1.1.1.1')
     dns_v6 = all_settings.get('dns_server_ipv6', '2606:4700:4700::1111')
-    wg_endpoint = all_settings.get('wg_server_endpoint') or _get_public_ip()
+    wg_endpoint = all_settings.get('wg_server_endpoint') or get_wan_ip() or "127.0.0.1" # Final fallback
 
     if client['type'] == 'Transit':
         client_address_list = transit_ips

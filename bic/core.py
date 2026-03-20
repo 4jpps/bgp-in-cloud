@@ -11,6 +11,17 @@ def get_wan_interface():
     except Exception:
         return "eth0" # Fallback to a common default
 
+def get_wan_ip():
+    """Gets the primary public IP address of the server."""
+    interface = get_wan_interface()
+    try:
+        # Use ip addr command and parse the output
+        cmd = f"ip -4 addr show {interface} | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}'"
+        ip = subprocess.check_output(cmd, shell=True, text=True).strip()
+        return ip
+    except Exception:
+        return None # Fallback if the command fails
+
 class BIC_DB:
     """
     BGP in the Cloud - Database Core

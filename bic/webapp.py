@@ -165,6 +165,15 @@ async def remove_assignment(assignment_type: str, assignment_id: int, client_id:
     network_management.deallocate_and_remove(db, assignment_type, assignment_id)
     return RedirectResponse(url=f"/page/clients/edit?id={client_id}", status_code=303)
 
+@app.get("/clients/configs/{client_id}", response_class=HTMLResponse)
+async def view_client_configs(request: Request, client_id: int, db: BIC_DB = Depends(get_db)):
+    settings = system_management.get_all_settings(db)
+    client = db.find_one("clients", {"id": client_id})
+    if not client:
+        raise HTTPException(status_code=404, detail="Client not found")
+    context = {"request": request, "settings": settings, "client": client, "menu": menu_structure, "current_path": f"/clients/configs/{client_id}", "version": __version__}
+    return templates.TemplateResponse("client_configs.html", context)
+
 @app.get("/system/statistics", response_class=HTMLResponse)
 async def system_stats_page(request: Request, db: BIC_DB = Depends(get_db)):
     settings = system_management.get_all_settings(db)

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+
+{% block title %}Client Configurations - {{ client.name }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">Configurations for {{ client.name }}</h1>
+
+<div class="space-y-6">
+    <!-- WireGuard Config -->
+    <div class="card">
+        <h2 class="text-xl font-semibold mb-4">WireGuard Configuration</h2>
+        <pre class="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-x-auto"><code>{{ client.wireguard_conf }}</code></pre>
+    </div>
+
+    <!-- BGP FRR Config -->
+    {% if client.bgp_frr_conf %}
+    <div class="card">
+        <h2 class="text-xl font-semibold mb-4">BGP (FRR) Configuration</h2>
+        <pre class="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-x-auto"><code>{{ client.bgp_frr_conf }}</code></pre>
+    </div>
+    {% endif %}
+
+    <!-- BGP BIRD Config -->
+    {% if client.bgp_bird_conf %}
+    <div class="card">
+        <h2 class="text-xl font-semibold mb-4">BGP (BIRD) Configuration</h2>
+        <pre class="bg-gray-100 dark:bg-gray-800 p-4 rounded-md overflow-x-auto"><code>{{ client.bgp_bird_conf }}</code></pre>
+    </div>
+    {% endif %}
+</div>
+
+<div class="mt-6">
+    <a href="{{ url_for('render_page', path='clients/list') }}" class="action-button">Back to Client List</a>
+</div>
+{% endblock %}

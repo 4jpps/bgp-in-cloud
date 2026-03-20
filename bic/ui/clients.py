@@ -87,6 +87,7 @@ view_clients = UIView(
         UIMenuItem(name="Edit", path="/clients/edit", item=edit_client_action),
         UIMenuItem(name="Delete", path="/clients/delete", item=delete_client_action),
         UIMenuItem(name="Send Email", path="/clients/send-email", item=send_welcome_email_action),
+        UIMenuItem(name="View Configs", path="/clients/configs", item=None), # Special case handled in template
     ]
 )
 

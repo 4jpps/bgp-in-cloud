@@ -7,3 +7,5 @@ pydantic
 aiosqlite
 jinja2
 python-multipart
+httpx
+packaging

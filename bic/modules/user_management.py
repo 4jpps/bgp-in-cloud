@@ -16,8 +16,13 @@ log = get_logger(__name__)
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 
 def hash_password(password: str) -> str:
-    """Hashes a password for storing."""
-    return pwd_context.hash(password)
+    """Hashes a password using bcrypt, truncating to 72 bytes if necessary."""
+    # Truncate password to 72 bytes to avoid ValueError from bcrypt
+    password_bytes = password.encode('utf-8')
+    if len(password_bytes) > 72:
+        log.warning("Password exceeds 72 bytes and will be truncated for hashing.")
+        password_bytes = password_bytes[:72]
+    return pwd_context.hash(password_bytes)
 
 def verify_password(plain_password: str, hashed_password: str) -> bool:
     """Verifies a plain password against a hash."""

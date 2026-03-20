@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1336
+
+-   **Bugfix:** Truncated passwords to 72 bytes before hashing to prevent a `ValueError` with bcrypt.
+
 ## Version 2026.03.20.1332
 
 -   **Bugfix:** Fixed a `NameError` on startup caused by a missing `os` import in `bic/webapp.py`.

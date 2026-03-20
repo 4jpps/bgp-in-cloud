@@ -44,4 +44,7 @@ class BIC_DB:
         # ... (migrations logic remains the same) ...
         pass
 
+    def find_all(self, table):
+        return self.conn.execute(f"SELECT * FROM {table}").fetchall()
+
     # ... (all other DB methods remain the same) ...

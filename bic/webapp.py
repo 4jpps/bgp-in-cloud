@@ -430,7 +430,7 @@ async def passkey_auth_verify(username: str, request: Request, db: BIC_DB = Depe
     await asyncio.to_thread(passkey_management.verify_authentication, db_core=db, user_id=user['id'], credential=credential)
     
     # Create a session for the user
-    access_token = user_management.create_access_token(data={"sub": user['username']})
+    access_token = user_management.create_access_token(db_core=db, data={"sub": user['username']})
     response = JSONResponse(content={"success": True})
     response.set_cookie(key="access_token", value=access_token, httponly=True)
     return response

@@ -9,7 +9,8 @@ from datetime import datetime, timedelta
 from passlib.context import CryptContext
 from zxcvbn import zxcvbn
 from jose import JWTError, jwt
-from bic.core import BIC_DB, get_logger, SECRET_KEY, ALGORITHM, ACCESS_TOKEN_EXPIRE_MINUTES
+from bic.core import BIC_DB, get_logger
+from bic.modules.system_management import get_secret_key, get_jwt_algorithm, get_token_expire_minutes
 
 # Initialize logger and password context
 log = get_logger(__name__)
@@ -96,24 +97,22 @@ def create_user(db_core: BIC_DB, username: str, email: str, password: str, role:
         log.error(f"Failed to insert user {username} into the database.")
         return None
 
-def create_access_token(data: dict, expires_delta: timedelta | None = None):
-    """Creates a new JWT access token.
-
-    Args:
-        data: The data to encode in the token payload (e.g., username, role).
-        expires_delta: An optional timedelta object for token expiration.
-                       Defaults to 15 minutes if not provided.
-
-    Returns:
-        The encoded JWT as a string.
-    """
+def create_access_token(db_core: BIC_DB, data: dict, expires_delta: timedelta | None = None):
+    """Creates a new JWT access token using settings from the database."""
     to_encode = data.copy()
+    
+    expire_minutes = get_token_expire_minutes(db_core)
     if expires_delta:
         expire = datetime.utcnow() + expires_delta
     else:
-        expire = datetime.utcnow() + timedelta(minutes=15)
+        expire = datetime.utcnow() + timedelta(minutes=expire_minutes)
+    
     to_encode.update({"exp": expire})
-    encoded_jwt = jwt.encode(to_encode, SECRET_KEY, algorithm=ALGORITHM)
+    
+    secret_key = get_secret_key(db_core)
+    algorithm = get_jwt_algorithm(db_core)
+    
+    encoded_jwt = jwt.encode(to_encode, secret_key, algorithm=algorithm)
     return encoded_jwt
 
 def login_user(db_core: BIC_DB, username: str, password: str):
@@ -147,8 +146,9 @@ def login_user(db_core: BIC_DB, username: str, password: str):
     add_audit_log(db_core, user_id=user['id'], action="login_success")
     log.info(f"User {username} successfully authenticated.")
     
-    access_token_expires = timedelta(minutes=ACCESS_TOKEN_EXPIRE_MINUTES)
+    access_token_expires = timedelta(minutes=get_token_expire_minutes(db_core))
     access_token = create_access_token(
+        db_core=db_core,
         data={"sub": user["username"], "role": user["role"]},
         expires_delta=access_token_expires
     )

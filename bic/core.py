@@ -22,11 +22,6 @@ def get_logger(name):
 
 log = get_logger(__name__)
 
-# --- Security & JWT Settings ---
-SECRET_KEY = "a_very_secret_key_that_should_be_changed"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
-
 # --- Network Utilities ---
 def get_wan_interface() -> str | None:
     """

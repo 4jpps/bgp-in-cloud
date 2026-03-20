@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1344
+
+-   **Security:** Migrated `SECRET_KEY` from a hardcoded value to a secure, database-driven setting. A new key is now generated automatically on first startup.
+
 ## Version 2026.03.20.1336
 
 -   **Bugfix:** Truncated passwords to 72 bytes before hashing to prevent a `ValueError` with bcrypt.

@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1538
+
+-   **Bugfix:** Resolved a critical `AttributeError` by adding a missing template definition to the `provision_client` UI action.
+
 ## Version 2026.03.20.1536
 
 -   **Bugfix:** Resolved a critical `AttributeError` by adding a missing template definition to the `edit_settings` UI action.

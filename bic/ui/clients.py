@@ -31,6 +31,7 @@ provision_client_action = UIAction(
     name="Provision New Client",
     handler=client_management.provision_new_client,
     redirect_to="/page/clients/list",
+    template="generic_form.html",
     form_fields=[
         FormField(name="name", label="Client Name", required=True),
         FormField(name="email", label="Client Email", type="email", required=True),

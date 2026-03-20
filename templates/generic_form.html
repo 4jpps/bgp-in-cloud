@@ -3,8 +3,11 @@
 {% block title %}{{ action.name }}{% endblock %}
 
 {% block content %}
-    <h1>{{ action.name }}</h1>
-    <form method="post" action="{{ url_for('handle_form_post', path=current_path.lstrip('/')) }}">
+<h1 class="text-2xl font-bold mb-6">{{ action.name }}</h1>
+
+<form method="post" action="{{ url_for('handle_form_post', path=current_path.lstrip('/')) }}">
+    <div class="card mb-6">
+        <h2 class="text-xl font-semibold mb-4">Client Details</h2>
         {% for field in fields %}
             <div>
                 <label for="{{ field.name }}">{{ field.label }}:</label>
@@ -15,73 +18,98 @@
                         {% endfor %}
                     </select>
                 {% else %}
-                    <input 
-                        type="{{ field.type }}" 
-                        id="{{ field.name }}" 
-                        name="{{ field.name }}" 
-                        {% if field.required %}required{% endif %}
-                        value="{{ data.get(field.name, '') }}"
-                    >
+                    <input type="{{ field.type }}" id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %} value="{{ data.get(field.name, '') }}">
                 {% endif %}
             </div>
         {% endfor %}
-        <button type="submit">Submit</button>
-    </form>
+    </div>
 
     {% if data.ip_allocations or data.ip_subnets %}
-    <div class="mt-8">
+    <div class="card mb-6">
         <h2 class="text-xl font-semibold mb-4">Current Assignments</h2>
-        <div class="card">
-            <ul>
-                {% for alloc in data.ip_allocations %}
-                <li class="flex justify-between items-center py-2 border-b">
-                    <span>IP: {{ alloc.ip_address }} ({{ alloc.description }})</span>
-                    <a href="/remove-assignment/ip/{{ alloc.id }}?client_id={{ data.id }}" class="action-button-red">Remove</a>
-                </li>
-                {% endfor %}
-                {% for subnet in data.ip_subnets %}
-                <li class="flex justify-between items-center py-2 border-b">
-                    <span>Subnet: {{ subnet.subnet }} ({{ subnet.description }})</span>
-                    <a href="/remove-assignment/subnet/{{ subnet.id }}?client_id={{ data.id }}" class="action-button-red">Remove</a>
-                </li>
-                {% endfor %}
-            </ul>
-        </div>
+        <ul>
+            {% for alloc in data.ip_allocations %}
+            <li class="flex justify-between items-center py-2 border-b">
+                <span>IP: {{ alloc.ip_address }} ({{ alloc.description }})</span>
+                <a href="/remove-assignment/ip/{{ alloc.id }}?client_id={{ data.id }}" class="action-button-red">Remove</a>
+            </li>
+            {% endfor %}
+            {% for subnet in data.ip_subnets %}
+            <li class="flex justify-between items-center py-2 border-b">
+                <span>Subnet: {{ subnet.subnet }} ({{ subnet.description }})</span>
+                <a href="/remove-assignment/subnet/{{ subnet.id }}?client_id={{ data.id }}" class="action-button-red">Remove</a>
+            </li>
+            {% endfor %}
+        </ul>
     </div>
     {% endif %}
 
-    {% if action.actions %}
-    <div class="mt-8">
-        {% for sub_action_item in action.actions %}
-            <div class="card mb-4">
-                <h2 class="text-xl font-semibold mb-4">{{ sub_action_item.item.name }}</h2>
-                <form method="post" action="{{ url_for('handle_form_post', path=sub_action_item.path.lstrip('/')) }}">
-                    <input type="hidden" name="client_id" value="{{ data.id }}">
-                    {% for field in sub_action_item.item.form_fields %}
-                        {% if field.type != 'hidden' %}
-                        <div>
-                            <label for="{{ field.name }}">{{ field.label }}:</label>
-                             {% if field.type == "select" %}
-                                <select id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
-                                    {% for opt in field.options %}
-                                        <option value="{{ opt.value }}">{{ opt.label }}</option>
-                                    {% endfor %}
-                                </select>
-                            {% else %}
-                                <input 
-                                    type="{{ field.type }}" 
-                                    id="{{ field.name }}" 
-                                    name="{{ field.name }}" 
-                                    {% if field.required %}required{% endif %}
-                                >
-                            {% endif %}
-                        </div>
-                        {% endif %}
-                    {% endfor %}
-                    <button type="submit">Submit</button>
-                </form>
-            </div>
-        {% endfor %}
+    <div class="card">
+        <h2 class="text-xl font-semibold mb-4">Add New Assignments</h2>
+        <div id="assignments-container" class="space-y-4"></div>
+        <div class="mt-4">
+            <button type="button" onclick="addAssignment()" class="action-button">+ Add Assignment</button>
+        </div>
     </div>
-    {% endif %}
+
+    <div class="mt-6">
+        <button type="submit" class="action-button-green">Update Client</button>
+    </div>
+</form>
+
+<script>
+let assignmentIndex = 0;
+
+function addAssignment() {
+    const container = document.getElementById('assignments-container');
+    const assignmentId = `assignment-${assignmentIndex}`;
+    
+    const div = document.createElement('div');
+    div.className = 'p-4 border rounded-md bg-gray-50 dark:bg-gray-800';
+    div.id = assignmentId;
+
+    div.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label for="assignment_pool_id_${assignmentIndex}">Pool:</label>
+                <select name="assignment_pool_id[]" id="assignment_pool_id_${assignmentIndex}" onchange="togglePrefixField('${assignmentId}')" required>
+                    <option value="">-- Select Pool --</option>
+                    {% for pool in action.actions[0].item.form_fields[1].options %}
+                        <option value="{{ pool.value }}">{{ pool.label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="assignment_type_${assignmentIndex}">Type:</label>
+                <select name="assignment_type[]" id="assignment_type_${assignmentIndex}" onchange="togglePrefixField('${assignmentId}')" required>
+                    <option value="static">Static IP</option>
+                    <option value="subnet">Subnet</option>
+                </select>
+            </div>
+            <div class="prefix-field" style="display: none;">
+                <label for="assignment_prefix_${assignmentIndex}">Prefix Length:</label>
+                <input type="number" name="assignment_prefix[]" id="assignment_prefix_${assignmentIndex}">
+            </div>
+        </div>
+        <div class="mt-2 text-right">
+            <button type="button" onclick="removeAssignment('${assignmentId}')" class="text-red-500 hover:text-red-700">Remove</button>
+        </div>
+    `;
+
+    container.appendChild(div);
+    assignmentIndex++;
+}
+
+function togglePrefixField(assignmentId) {
+    const assignmentDiv = document.getElementById(assignmentId);
+    const typeSelect = assignmentDiv.querySelector('select[name="assignment_type[]"]');
+    const prefixField = assignmentDiv.querySelector('.prefix-field');
+    prefixField.style.display = typeSelect.value === 'subnet' ? 'block' : 'none';
+}
+
+function removeAssignment(assignmentId) {
+    const assignmentDiv = document.getElementById(assignmentId);
+    assignmentDiv.remove();
+}
+</script>
 {% endblock %}

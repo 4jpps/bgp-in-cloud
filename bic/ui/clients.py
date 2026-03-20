@@ -43,9 +43,7 @@ edit_client_action = UIAction(
         FormField(name="email", label="Email", type="email"),
         FormField(name="type", label="Client Type", type="select", options_loader=get_client_type_options, required=True),
     ],
-    actions=[
-        UIMenuItem(name="Add Subnet", path="/clients/add-subnet", item=add_subnet_action)
-    ]
+    actions=[]
 )
 
 delete_client_action = UIAction(

@@ -3,118 +3,109 @@
 {% block title %}Provision New Client{% endblock %}
 
 {% block content %}
-    <h1>Provision New Client</h1>
-    <form action="/clients/provision/new" method="post">
-        <fieldset>
-            <legend>Client Details</legend>
-            <label for="client_name">Client Name</label>
-            <input type="text" id="client_name" name="client_name" required>
-            <label for="client_email">Client Email</label>
-            <input type="email" id="client_email" name="client_email">
-        </fieldset>
+<h1 class="text-2xl font-bold mb-6">Provision New Client</h1>
 
-        <fieldset>
-            <legend>Client Type</legend>
-            <label for="client_type">Type</label>
-            <select id="client_type" name="client_type">
-                <option value="Standard" selected>Standard (Static IPs/Subnets)</option>
-                <option value="BGP">BGP Peer</option>
-            </select>
-            <small>If BGP is selected, the next available private ASN will be assigned automatically.</small>
-        </fieldset>
-
-        <fieldset id="assignments-container">
-            <legend>IP Assignments</legend>
-            <div id="assignments-wrapper">
-                <!-- Assignment rows will be injected here by JavaScript -->
+<form method="post" action="{{ url_for('handle_provision_client') }}" id="provision-form">
+    <div class="card mb-6">
+        <h2 class="text-xl font-semibold mb-4">Client Details</h2>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div>
+                <label for="client_name">Client Name:</label>
+                <input type="text" id="client_name" name="client_name" required>
             </div>
-            <button type="button" onclick="addAssignmentRow()">+ Add IP/Subnet Assignment</button>
-        </fieldset>
-
-        <hr>
-        <button type="submit">Provision Client</button>
-    </form>
-
-    <!-- Template for a new assignment row -->
-    <template id="assignment-row-template">
-        <div class="assignment-row">
-            <select name="assignment_pool_id" onchange="updatePrefixOptions(this)">
-                {% for pool in pools %}
-                    <option value="{{ pool.id }}" data-cidr="{{ pool.cidr }}">{{ pool.description or pool.name }}</option>
-                {% endfor %}
-            </select>
-            <select name="assignment_type" onchange="togglePrefixInput(this)">
-                <option value="static">Single IP</option>
-                <option value="subnet">Subnet</option>
-            </select>
-            <select name="assignment_prefix" style="display: none;">
-                <!-- Options will be populated by JavaScript -->
-            </select>
-            <button type="button" onclick="this.parentElement.remove()">Remove</button>
+            <div>
+                <label for="client_email">Client Email:</label>
+                <input type="email" id="client_email" name="client_email" required>
+            </div>
+            <div>
+                <label for="client_type">Client Type:</label>
+                <select id="client_type" name="client_type" onchange="toggleAsnField()">
+                    <option value="Standard">Standard</option>
+                    <option value="Transit">Transit</option>
+                </select>
+            </div>
+            <div id="asn-field" style="display: none;">
+                <label for="asn">ASN:</label>
+                <input type="number" id="asn" name="asn">
+            </div>
         </div>
-    </template>
+    </div>
+
+    <div class="card">
+        <h2 class="text-xl font-semibold mb-4">IP & Subnet Assignments</h2>
+        <div id="assignments-container" class="space-y-4"></div>
+        <div class="mt-4">
+            <button type="button" onclick="addAssignment()" class="action-button">+ Add Assignment</button>
+        </div>
+    </div>
+
+    <div class="mt-6">
+        <button type="submit" class="action-button-green">Provision Client</button>
+    </div>
+</form>
 
 <script>
-function addAssignmentRow() {
-    const template = document.getElementById('assignment-row-template');
-    const wrapper = document.getElementById('assignments-wrapper');
-    const clone = template.content.cloneNode(true);
-    wrapper.appendChild(clone);
-    // Initialize prefix options for the new row
-    const poolSelect = clone.querySelector('select[name="assignment_pool_id"]');
-    const typeSelect = clone.querySelector('select[name="assignment_type"]');
-    updatePrefixOptions(poolSelect);
-    togglePrefixInput(typeSelect);
+function toggleAsnField() {
+    const clientType = document.getElementById('client_type').value;
+    const asnField = document.getElementById('asn-field');
+    asnField.style.display = clientType === 'Transit' ? 'block' : 'none';
 }
 
-function togglePrefixInput(selectElement) {
-    const prefixSelect = selectElement.nextElementSibling;
-    const poolSelect = selectElement.previousElementSibling;
-    const selectedOption = poolSelect.options[poolSelect.selectedIndex];
-    const cidr = selectedOption.getAttribute('data-cidr');
-    const isIPv6 = cidr.includes(':');
+let assignmentIndex = 0;
+
+function addAssignment() {
+    const container = document.getElementById('assignments-container');
+    const assignmentId = `assignment-${assignmentIndex}`;
     
-    if (selectElement.value === 'static') {
-        // Single IP - hide prefix dropdown
-        prefixSelect.style.display = 'none';
-    } else {
-        // Subnet - show prefix dropdown with appropriate options
-        prefixSelect.style.display = 'inline-block';
-        // Clear existing options
-        prefixSelect.innerHTML = '';
-        
-        // Add appropriate subnet options (exclude /32 and /128)
-        const options = isIPv6 ? ['/64', '/56'] : ['/29', '/27'];
-        options.forEach(prefix => {
-            const option = document.createElement('option');
-            option.value = prefix.substring(1); // Remove the / 
-            option.textContent = prefix;
-            prefixSelect.appendChild(option);
-        });
-    }
+    const div = document.createElement('div');
+    div.className = 'p-4 border rounded-md bg-gray-50 dark:bg-gray-800';
+    div.id = assignmentId;
+
+    div.innerHTML = `
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <div>
+                <label for="assignment_pool_id_${assignmentIndex}">Pool:</label>
+                <select name="assignment_pool_id[]" id="assignment_pool_id_${assignmentIndex}" onchange="togglePrefixField('${assignmentId}')" required>
+                    <option value="">-- Select Pool --</option>
+                    {% for pool in pools %}
+                        <option value="{{ pool.id }}">{{ pool.name }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div>
+                <label for="assignment_type_${assignmentIndex}">Type:</label>
+                <select name="assignment_type[]" id="assignment_type_${assignmentIndex}" onchange="togglePrefixField('${assignmentId}')" required>
+                    <option value="static">Static IP</option>
+                    <option value="subnet">Subnet</option>
+                </select>
+            </div>
+            <div class="prefix-field" style="display: none;">
+                <label for="assignment_prefix_${assignmentIndex}">Prefix Length:</label>
+                <input type="number" name="assignment_prefix[]" id="assignment_prefix_${assignmentIndex}">
+            </div>
+        </div>
+        <div class="mt-2 text-right">
+            <button type="button" onclick="removeAssignment('${assignmentId}')" class="text-red-500 hover:text-red-700">Remove</button>
+        </div>
+    `;
+
+    container.appendChild(div);
+    assignmentIndex++;
 }
 
-function updatePrefixOptions(poolSelect) {
-    // This function is called when pool changes, but we mainly use it to ensure
-    // the prefix options are updated when needed. The actual logic is in togglePrefixInput.
-    const typeSelect = poolSelect.nextElementSibling;
-    togglePrefixInput(typeSelect);
+function togglePrefixField(assignmentId) {
+    const assignmentDiv = document.getElementById(assignmentId);
+    const typeSelect = assignmentDiv.querySelector('select[name="assignment_type[]"]');
+    const prefixField = assignmentDiv.querySelector('.prefix-field');
+    prefixField.style.display = typeSelect.value === 'subnet' ? 'block' : 'none';
 }
 
-// Add one assignment row to start with
-document.addEventListener('DOMContentLoaded', addAssignmentRow);
+function removeAssignment(assignmentId) {
+    const assignmentDiv = document.getElementById(assignmentId);
+    assignmentDiv.remove();
+}
+
+// Initial state
+toggleAsnField();
 </script>
-
-<style>
-    .assignment-row {
-        display: flex;
-        gap: 10px;
-        align-items: center;
-        margin-bottom: 10px;
-    }
-    .assignment-row select,
-    .assignment-row input {
-        flex-grow: 1;
-    }
-</style>
 {% endblock %}

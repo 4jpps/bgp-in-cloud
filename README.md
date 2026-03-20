@@ -14,6 +14,8 @@ This project is a comprehensive IP Address Management (IPAM) and BGP orchestrati
 
 ## Getting Started
 
+This project includes an installer script to automate the setup process.
+
 1.  **Clone the Repository:**
 
     ```bash
@@ -21,26 +23,20 @@ This project is a comprehensive IP Address Management (IPAM) and BGP orchestrati
     cd bgp-in-cloud
     ```
 
-2.  **Installation:**
+2.  **Run the Installer:**
 
+    On Linux or macOS:
     ```bash
-    pip install -r requirements.txt
+    ./bic-installer.sh
     ```
 
-2.  **Initialize the Database:**
+    This script will create a Python virtual environment, install all dependencies, and initialize the database. If you are on Windows or prefer to run the steps manually, please see the [Developer Guide](docs/DEVELOPER_GUIDE.md).
 
+3.  **Run the Application:**
+
+    After the installer completes, activate the virtual environment and start the application:
     ```bash
-    python init_db.py
-    ```
-
-3.  **Configuration:**
-
-    -   Copy `.env.example` to `.env` and customize the settings.
-    -   Set `YUBICO_CLIENT_ID` and `YUBICO_SECRET_KEY` in your environment if you plan to use the YubiKey integration.
-
-3.  **Running the Application:**
-
-    ```bash
+    source venv/bin/activate
     uvicorn bic.webapp:app --reload
     ```
 

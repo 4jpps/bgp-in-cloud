@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1424
+
+-   **Installer:** Added a `bic-installer.sh` script to automate the entire setup process, from virtual environment creation to database initialization.
+
 ## Version 2026.03.20.1418
 
 -   **Bugfix:** Added missing `passlib` and `zxcvbn` dependencies to `requirements.txt` to prevent `ModuleNotFoundError` on startup.

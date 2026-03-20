@@ -1,162 +1,60 @@
 #!/bin/bash
-# BIC - BGP in the Cloud - System Installer
-# This script prepares a fresh Debian 12 system for the BIC application.
 
-# --- Configuration & Constants ---
-PYTHON_EXEC="python3"
-REQ_FILE="requirements.txt"
+# BGP in Cloud (BIC) Installer
+# This script automates the setup of the BIC application.
 
-echo "
-╔══════════════════════════════════════════════════════╗
-║      BGP in the Cloud (BIC) System Installer       ║
-╚══════════════════════════════════════════════════════╝
-"
+set -e # Exit immediately if a command exits with a non-zero status.
 
-# --- Root Check ---
-if [ "$(id -u)" -ne 0 ]; then
-  echo "❌ This script must be run as root. Please use sudo." >&2
-  exit 1
+# --- Configuration ---
+PYTHON_CMD="python3"
+VENV_DIR="venv"
+
+# --- Helper Functions ---
+echo_green() {
+    echo -e "\033[0;32m$1\033[0m"
+}
+
+echo_red() {
+    echo -e "\033[0;31m$1\033[0m"
+}
+
+# --- Sanity Checks ---
+echo_green "[1/5] Checking for dependencies..."
+if ! command -v $PYTHON_CMD &> /dev/null; then
+    echo_red "ERROR: $PYTHON_CMD is not installed. Please install Python 3 and try again."
+    exit 1
 fi
 
-# --- Step 1: System Package Update ---
-echo "
-▶️ [1/5] Updating system packages..."
-apt-get update > /dev/null
-apt-get upgrade -y
-echo "✅ System packages are up to date."
+if ! $PYTHON_CMD -m venv --help &> /dev/null; then
+    echo_red "ERROR: The 'venv' module is not available. Please install the python3-venv package (or equivalent) for your distribution."
+    exit 1
+fi
 
-# --- Step 2: Install Core Dependencies ---
-echo "
-▶️ [2/5] Installing core dependencies (Bird2, WireGuard, Python)..."
-apt-get install -y bird2 wireguard python3-venv python3-pip
-
-echo "   -> Creating BIRD configuration directory..."
-mkdir -p /etc/bird/
-
-cat << EOF > /etc/bird/bird.conf
-# ==========================================================
-# JEFF PARRISH PC SERVICES (JPPS) - MANAGED BGP SKELETON
-# Upstream: Route64 (AS212895) | Downstream: IPAM Managed
-# ==========================================================
-
-log syslog all;
-router id 10.255.255.255;
-
-protocol device {
-    scan time 10;
-}
-
-# 1. KERNEL SYNC
-protocol kernel kernel4 {
-    ipv4 { export all; import none; };
-}
-
-protocol kernel kernel6 {
-    ipv6 { export all; import none; };
-}
-
-# 2. UPSTREAM ASSETS (Route64)
-# Populated by bic/modules/network_management.py
-include "/etc/bird/bic_prefixes_v4.conf";
-include "/etc/bird/bic_prefixes_v6.conf";
-
-# 3. UPSTREAM FILTERS (Outbound to Route64)
-# Populated by bic/modules/network_management.py
-include "/etc/bird/bic_filter_v4.conf";
-include "/etc/bird/bic_filter_v6.conf";
-
-# 4. UPLINK SESSIONS
-protocol bgp r64_v4 {
-    local as 401575;
-    neighbor 100.64.212.253 as 212895;
-    ipv4 {
-        import all;
-        export filter out_r64_v4;
-    };
-}
-
-protocol bgp r64_v6 {
-    local as 401575;
-    neighbor 2a11:6c7:f01:be::1 as 212895;
-    multihop;
-    ipv6 {
-        import all;
-        export filter out_r64_v6;
-    };
-}
-
-# 5. CUSTOMER TEMPLATE
-template bgp t_customer {
-    local as 401575;
-    multihop;
-    hold time 30;
-    keepalive time 10;
-    ipv4 {
-        # Security filtering is now handled by the system firewall (iptables)
-        import all;
-        export all;
-        next hop self;
-    };
-    ipv6 {
-        # Security filtering is now handled by the system firewall (iptables)
-        import all;
-        export all;
-        next hop self;
-    };
-}
-
-# 6. DYNAMIC INCLUDES
-# Not currently used, but safe to include as a blank file
-include "/etc/bird/client_filters.conf";
-
-# Populated by bic/modules/bgp_management.py
-include "/etc/bird/peers.conf";
-EOF
-
-echo "✅ Core dependencies installed."
-
-
-# --- Step 3: Firewall Configuration Guidance ---
-WG_PORT=51820 # Default WireGuard Port
-echo "
-▶️ [3/5] Checking firewall status..."
-if command -v ufw &> /dev/null && ufw status | grep -q "Status: active"; then
-    echo "🔥 UFW firewall is active. Please ensure the following ports are open:"
-    echo "   - Your SSH port (e.g., 22/tcp)"
-    echo "   - WireGuard port: $WG_PORT/udp"
-    echo "   To open the WireGuard port, you can run: sudo ufw allow $WG_PORT/udp"
-elif command -v nft >/dev/null && nft list ruleset | grep -q "hook input"; then
-    echo "🔥 nftables is active. Please ensure ports for SSH and WireGuard ($WG_PORT/udp) are open."
+# --- Virtual Environment Setup ---
+echo_green "[2/5] Creating Python virtual environment in './$VENV_DIR'..."
+if [ -d "$VENV_DIR" ]; then
+    echo "Virtual environment already exists. Skipping creation."
 else
-    echo "✅ No active firewall (UFW/nftables) detected. Ensure your cloud provider's firewall is configured."
+    $PYTHON_CMD -m venv $VENV_DIR
 fi
 
-# --- Step 4: Python Virtual Environment Setup ---
-echo "
-▶️ [4/5] Setting up Python virtual environment..."
-if [ ! -d "venv" ]; then
-    $PYTHON_EXEC -m venv venv
-    echo "   -> Virtual environment created."
-else
-    echo "   -> Virtual environment already exists."
-fi
+# --- Activate Virtual Environment ---
+source "$VENV_DIR/bin/activate"
+echo_green "[3/5] Virtual environment activated."
 
-# --- Step 5: Install Python Dependencies ---
-echo "
-▶️ [5/5] Installing Python dependencies from $REQ_FILE..."
+# --- Install Dependencies ---
+echo_green "[4/5] Installing required packages from requirements.txt..."
+pip install -r requirements.txt
 
-source venv/bin/activate
+# --- Database Initialization ---
+echo_green "[5/5] Initializing the database..."
+python init_db.py
 
-pip install -r "$REQ_FILE"
-
-deactivate
-
-echo "
-
-🎉 Installation Complete! 🎉
-
-To start the application, run the following command from the project directory:
-
-./bic-start.sh
-
-"
+# --- Success ---
+echo_green "-------------------------------------------------"
+echo_green "SUCCESS: BGP in Cloud has been installed!"
+echo_green "-------------------------------------------------"
+echo "To run the application, first activate the environment:"
+echo "  source $VENV_DIR/bin/activate"
+echo "Then start the web server:"
+echo "  uvicorn bic.webapp:app --reload"

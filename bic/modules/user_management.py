@@ -168,17 +168,15 @@ def list_users(db_core: BIC_DB, **kwargs) -> list:
     log.info("Fetching all users.")
     return db_core.find_all("users")
 
-def get_user(db_core: BIC_DB, id: str) -> dict | None:
-    """Fetches a single user by their ID.
-
-    Args:
-        db_core: An instance of the BIC_DB database core.
-        id: The UUID of the user to fetch.
-
-    Returns:
-        A dictionary representing the user, or None if not found.
-    """
-    return db_core.find_one("users", {"id": id})
+def get_user(db_core: BIC_DB, id: str, **kwargs) -> dict | None:
+    """Fetches a single user by their ID and includes available roles for forms."""
+    user = db_core.find_one("users", {"id": id})
+    if not user:
+        return None
+    
+    # Inject the list of available roles for form dropdowns
+    user['_roles'] = ['user', 'admin']
+    return user
 
 def update_user(db_core: BIC_DB, id: str, username: str, email: str, role: str, password: str = None, user: dict = None, **kwargs):
     """Updates an existing user's information.

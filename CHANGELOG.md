@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1507
+
+-   **Bugfix:** Fixed the "Edit User" page by correctly loading and pre-selecting the user's role in the dropdown.
+
 ## Version 2026.03.20.1501
 
 -   **Bugfix:** Resolved a second `NameError` by refactoring `get_current_user_optional` to use database-driven JWT settings.

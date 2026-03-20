@@ -5,45 +5,34 @@
 {% block content %}
 <h1 class="text-2xl font-bold mb-6">{{ item.name }}</h1>
 
-<div class="card">
-    <form method="post" action="/action/{{ request.path_params.path }}">
+<div class="card max-w-lg mx-auto">
+    <form method="post" action="/action/{{ item.path }}" class="space-y-4">
         {% for field in item.form_fields %}
-            {% if field.type == 'hidden' %}
-                <input type="hidden" name="{{ field.name }}" value="{{ (data.get(field.name) if data else '') or field.default or '' }}">
+        <div>
+            <label for="{{ field.name }}" class="block text-sm font-medium">{{ field.label }}</label>
+            {% if field.type == 'select' %}
+                <select name="{{ field.name }}" id="{{ field.name }}" class="form-input">
+                    {% set current_value = (form_data.get(field.name) if form_data else '')|string %}
+                    {% for option in form_data.get('_roles', field.options) %}
+                        <option value="{{ option }}" {% if option|string == current_value %}selected{% endif %}>{{ option }}</option>
+                    {% endfor %}
+                </select>
             {% else %}
-                <div class="mb-4">
-                    <label for="{{ field.name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ field.label }}</label>
-                    
-                    {% if field.type == "select" %}
-                        <select id="{{ field.name }}" name="{{ field.name }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600" {% if field.required %}required{% endif %}>
-                            {% if field.options_loader %}
-                                {# Options are loaded dynamically, can't render them here without more complex backend #}
-                                {# This assumes the loader pre-populates field.options, which it doesn't yet. #}
-                                {# For now, this will be empty unless options are hardcoded. #}
-                            {% endif %}
-                             {% for opt in field.options %}
-                                <option value="{{ opt.value }}" {% if data and data.get(field.name)|string == opt.value|string %}selected{% endif %}>{{ opt.label }}</option>
-                            {% endfor %}
-                        </select>
-                    {% else %}
-                        <input type="{{ field.type }}" 
-                               id="{{ field.name }}" 
-                               name="{{ field.name }}" 
-                               value="{{ (data.get(field.name) if data else '') or field.default or '' }}" 
-                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600" 
-                               {% if field.required %}required{% endif %} 
-                               {% if field.readonly %}readonly{% endif %}
-                               placeholder="{{ field.placeholder or '' }}">
-                    {% endif %}
-                </div>
+                <input type="{{ field.type or 'text' }}" name="{{ field.name }}" id="{{ field.name }}" 
+                       value="{{ form_data.get(field.name, '') if form_data else '' }}" 
+                       class="form-input" 
+                       {% if field.required %}required{% endif %}>
             {% endif %}
+            {% if field.help_text %}
+                <p class="text-xs text-gray-500 mt-1">{{ field.help_text }}</p>
+            {% endif %}
+        </div>
         {% endfor %}
-        
-        <div class="mt-6">
-            <button type="submit" class="action-button-green">{{ item.name }}</button>
-            <a href="{{ request.headers.get('referer', '/') }}" class="action-button ml-2">Cancel</a>
+
+        <div class="flex justify-end space-x-4">
+            <a href="{{ item.redirect_to }}" class="action-button-secondary">Cancel</a>
+            <button type="submit" class="action-button">{{ item.name }}</button>
         </div>
     </form>
 </div>
-
 {% endblock %}

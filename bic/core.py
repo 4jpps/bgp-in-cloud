@@ -1,5 +1,15 @@
 import sqlite3
 import os
+import subprocess
+
+def get_wan_interface():
+    """Determines the primary public-facing network interface."""
+    try:
+        route_cmd = "ip route get 8.8.8.8"
+        proc = subprocess.run(route_cmd, shell=True, check=True, capture_output=True, text=True)
+        return proc.stdout.split()[4]
+    except Exception:
+        return "eth0" # Fallback to a common default
 
 class BIC_DB:
     """

@@ -4,17 +4,8 @@ import subprocess
 import os
 import sys
 import ipaddress
-from bic.core import BIC_DB
+from bic.core import BIC_DB, get_wan_interface
 from bic.modules.network_management import get_pool_usage
-
-def _get_wan_interface():
-    """Determines the primary public-facing network interface."""
-    try:
-        route_cmd = "ip route get 8.8.8.8"
-        proc = subprocess.run(route_cmd, shell=True, check=True, capture_output=True, text=True)
-        return proc.stdout.split()[4]
-    except Exception:
-        return None
 
 def _format_bytes(byte_count):
     """Formats bytes into a human-readable string (KB, MB, GB)."""
@@ -106,7 +97,7 @@ def gather_all_statistics(db_core: BIC_DB) -> dict:
 
     # --- Network Stats ---
     try:
-        wan_interface = _get_wan_interface()
+        wan_interface = get_wan_interface()
         if wan_interface:
             net_io = psutil.net_io_counters(pernic=True).get(wan_interface)
             stats['bytes_sent'] = _format_bytes(net_io.bytes_sent)

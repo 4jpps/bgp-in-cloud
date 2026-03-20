@@ -26,6 +26,7 @@ edit_settings = UIAction(
     handler=system_management.save_all_settings,
     redirect_to="/page/system/settings",
     loader=system_management.get_all_settings,
+    template="generic_form.html",
     form_fields=[
         FormField(name="smtp_host", label="SMTP Host"),
         FormField(name="smtp_port", label="SMTP Port", type="number", default=587),

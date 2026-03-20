@@ -67,59 +67,80 @@ def update_wireguard_config_for_client(db_core: BIC_DB, client_id: int):
     if not server_interface:
         return {"success": False, "message": "Could not ensure WireGuard server interface."}
 
-    single_ips = db_core.find_all_by('ip_allocations', {'client_id': client_id})
+    # --- IP Analysis ---
+    allocations = db_core.find_all_by('ip_allocations', {'client_id': client_id})
     subnets = db_core.find_all_by('ip_subnets', {'client_id': client_id})
-    
-    transit_ips = [f"{alloc['ip_address']}/{128 if ':' in alloc['ip_address'] else 32}" for alloc in single_ips if "Transit" in alloc.get('description', '')]
-    direct_ips = [f"{alloc['ip_address']}/{128 if ':' in alloc['ip_address'] else 32}" for alloc in single_ips if "Transit" not in alloc.get('description', '')]
-    direct_subnets = [s['subnet'] for s in subnets]
 
-    if client['type'] == 'Transit':
-        server_allowed_ips = transit_ips
-    else: # Standard
-        server_allowed_ips = transit_ips + direct_ips + direct_subnets
-    server_allowed_ips_str = ", ".join(server_allowed_ips)
+    has_ipv4 = any(ipaddress.ip_address(a['ip_address']).version == 4 for a in allocations) or \
+               any(ipaddress.ip_network(s['subnet']).version == 4 for s in subnets)
+    has_ipv6 = any(ipaddress.ip_address(a['ip_address']).version == 6 for a in allocations) or \
+               any(ipaddress.ip_network(s['subnet']).version == 6 for s in subnets)
 
+    transit_v4 = next((a for a in allocations if "Transit P2P IPv4" in a.get('description', '')), None)
+    transit_v6 = next((a for a in allocations if "Transit P2P IPv6" in a.get('description', '')), None)
+    direct_ips = [a for a in allocations if "Transit" not in a.get('description', '')]
+
+    # --- Server-Side Peer Config ---
+    server_allowed_ips = []
+    if has_ipv4 and transit_v4: server_allowed_ips.append(f"{transit_v4['ip_address']}/32")
+    if has_ipv6 and transit_v6: server_allowed_ips.append(f"{transit_v6['ip_address']}/128")
+    if client['type'] != 'BGP': # For direct clients, add their public IPs
+        server_allowed_ips.extend([f"{a['ip_address']}/{32 if ipaddress.ip_address(a['ip_address']).version == 4 else 128}" for a in direct_ips])
+        server_allowed_ips.extend([s['subnet'] for s in subnets])
+
+    # Find or create peer
     peer = db_core.find_one('wireguard_peers', {'client_id': client_id})
     if peer:
-        db_core.update('wireguard_peers', peer['id'], {'allowed_ips': server_allowed_ips_str})
+        db_core.update('wireguard_peers', peer['id'], {'allowed_ips': ", ".join(server_allowed_ips)})
         client_private_key = db_core.get_setting(f"wg_client_{client_id}_privkey")
     else:
         keys = generate_keys()
-        if not keys:
-            return {"success": False, "message": "Failed to generate WireGuard keys."}
-        
+        if not keys: return {"success": False, "message": "Failed to generate WireGuard keys."}
         db_core.insert('wireguard_peers', {
             'interface_id': server_interface['id'], 'client_id': client_id, 'name': client['name'],
-            'public_key': keys['public_key'], 'allowed_ips': server_allowed_ips_str,
+            'public_key': keys['public_key'], 'allowed_ips': ", ".join(server_allowed_ips),
         })
         client_private_key = keys['private_key']
         db_core.insert_or_replace('settings', {'key': f"wg_client_{client_id}_privkey", 'value': client_private_key})
 
-    all_settings = {s['key']: s['value'] for s in db_core.find_all('settings')}
-    dns_v4 = all_settings.get('dns_server_ipv4', '1.1.1.1')
-    dns_v6 = all_settings.get('dns_server_ipv6', '2606:4700:4700::1111')
-    wg_endpoint = all_settings.get('wg_server_endpoint') or get_wan_ip() or "127.0.0.1" # Final fallback
+    # --- Client-Side Config Generation ---
+    # DNS
+    dns_servers = []
+    server_v4_ip = ipaddress.ip_network(server_interface['address'].split(',')[0].strip()).network_address + 1
+    server_v6_ip = ipaddress.ip_network(server_interface['address'].split(',')[1].strip()).network_address + 1
+    if has_ipv4: dns_servers.append(str(server_v4_ip))
+    if has_ipv6: dns_servers.append(str(server_v6_ip))
 
-    if client['type'] == 'Transit':
-        client_address_list = transit_ips
-        client_allowed_ips_list = transit_ips + ['0.0.0.0/0', '::/0']
-    else: # Standard
-        client_address_list = transit_ips + direct_ips + direct_subnets
-        client_allowed_ips_list = ['0.0.0.0/0', '::/0']
+    # Client-side Address
+    client_address_list = []
+    if has_ipv4 and transit_v4: client_address_list.append(f"{transit_v4['ip_address']}/32")
+    if has_ipv6 and transit_v6: client_address_list.append(f"{transit_v6['ip_address']}/128")
+    if client['type'] != 'BGP':
+        client_address_list.extend([f"{a['ip_address']}/{32 if ipaddress.ip_address(a['ip_address']).version == 4 else 128}" for a in direct_ips])
+        client_address_list.extend([s['subnet'] for s in subnets])
 
+    # Client-side AllowedIPs
+    client_allowed_ips = []
+    if client['type'] == 'BGP':
+        if has_ipv4: client_allowed_ips.append(f"{server_v4_ip}/32")
+        if has_ipv6: client_allowed_ips.append(f"{server_v6_ip}/128")
+    if has_ipv4: client_allowed_ips.append("0.0.0.0/0")
+    if has_ipv6: client_allowed_ips.append("::/0")
+    
+    # Build the config file
     client_conf = "[Interface]\n"
     client_conf += f"PrivateKey = {client_private_key}\n"
     client_conf += f"Address = {', '.join(client_address_list)}\n"
-    client_conf += f"DNS = {dns_v4}, {dns_v6}\n\n"
+    client_conf += f"DNS = {', '.join(dns_servers)}\n"
+    client_conf += "MTU = 1420\n\n"
     client_conf += "[Peer]\n"
     client_conf += f"PublicKey = {server_interface['public_key']}\n"
+    wg_endpoint = db_core.get_setting('wg_server_endpoint') or get_wan_ip() or "127.0.0.1"
     client_conf += f"Endpoint = {wg_endpoint}:{server_interface['listen_port']}\n"
-    client_conf += f"AllowedIPs = {', '.join(client_allowed_ips_list)}\n"
+    client_conf += f"AllowedIPs = {', '.join(client_allowed_ips)}\n"
     client_conf += "PersistentKeepalive = 25\n"
 
     db_core.update('clients', client_id, {'wireguard_conf': client_conf})
-
     write_server_config_from_db(db_core, server_interface['id'])
     
     return {"success": True, "message": "WireGuard configuration updated."}
@@ -127,9 +148,7 @@ def update_wireguard_config_for_client(db_core: BIC_DB, client_id: int):
 def remove_peer_from_interface(db_core: BIC_DB, peer_id: int):
     """Removes a peer from the DB and rewrites the server config."""
     peer = db_core.find_one('wireguard_peers', {'id': peer_id})
-    if not peer:
-        return False
-    
+    if not peer: return False
     interface_id = peer['interface_id']
     db_core.delete('wireguard_peers', peer_id)
     write_server_config_from_db(db_core, interface_id)
@@ -138,13 +157,11 @@ def remove_peer_from_interface(db_core: BIC_DB, peer_id: int):
 def ensure_server_interface(db_core: BIC_DB):
     """Ensures the primary wg1 server interface exists in the DB, creating if not."""
     interface = db_core.find_one('wireguard_interfaces', {'name': 'wg1'})
-    if interface:
-        return interface
+    if interface: return interface
     
     console.print("[cyan]Primary WireGuard interface 'wg1' not found in DB, creating...[/cyan]")
     keys = generate_keys()
-    if not keys:
-        return None
+    if not keys: return None
 
     v4_pool = db_core.find_one('ip_pools', {'name': 'WG Server P2P IPv4'})
     v6_pool = db_core.find_one('ip_pools', {'name': 'WG Server P2P IPv6'})
@@ -156,23 +173,8 @@ def ensure_server_interface(db_core: BIC_DB):
     server_v6 = v6_net.network_address + 1
 
     interface_id = db_core.insert('wireguard_interfaces', {
-        'name': 'wg1', 'listen_port': 51821, 
+        'name': 'wg1', 'listen_port': 51821,
         'address': f"{server_v4}/{v4_net.prefixlen}, {server_v6}/{v6_net.prefixlen}",
         'private_key': keys['private_key'], 'public_key': keys['public_key']
     })
     return db_core.find_one('wireguard_interfaces', {'id': interface_id})
-
-def rebuild_and_update_peer_allowed_ips(db_core: BIC_DB, client_id: int):
-    """Recalculates a client's AllowedIPs and updates the WG config."""
-    return update_wireguard_config_for_client(db_core, client_id)
-
-def list_peers_joined(db_core: BIC_DB):
-    """Lists all WireGuard peers with client and interface info."""
-    query = """
-        SELECT p.id, p.name, p.public_key, p.allowed_ips, c.name as client_name, i.name as interface_name
-        FROM wireguard_peers p
-        LEFT JOIN clients c ON p.client_id = c.id
-        LEFT JOIN wireguard_interfaces i ON p.interface_id = i.id
-    """
-    rows = db_core.conn.execute(query).fetchall()
-    return [dict(row) for row in rows]

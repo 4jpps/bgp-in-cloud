@@ -1,67 +1,75 @@
-import smtplib
-from email.message import EmailMessage
-from rich.console import Console
-from bic.core import BIC_DB
+#!/usr/bin/env python
 
-console = Console()
-
-def send_client_welcome_email(db_core: BIC_DB, client_id: int):
-    """
-    Constructs and sends a welcome email to a new client with all their
-    necessary configuration files attached.
-    """
-    client = db_core.find_one("clients", {"id": client_id})
-    if not client or not client.get('email'):
-        console.print(f"[red]Cannot send email: No client or client email found for ID {client_id}[/red]")
-        return
-
-    settings = {s['key']: s['value'] for s in db_core.find_all('settings')}
-    if not all(k in settings for k in ['smtp_server', 'smtp_port', 'smtp_user', 'smtp_password', 'smtp_sender']):
-        console.print("[bold red]Email cannot be sent. SMTP settings are incomplete.[/bold red]")
-        return
-
-    client_name = client['name']
-    subject = f"Your BGP in the Cloud service configurations for {client_name}"
-    from_name = settings.get('branding_email_from_name', 'The BGP in the Cloud Team')
-    body = f"""Hi {client_name},
-
-Welcome to BGP in the Cloud!
-
-Your configuration file(s) are attached to this email.
-
-Thank you,
-{from_name}
+"""
+This module handles all client and system email notifications.
 """
 
-    msg = EmailMessage()
-    msg.set_content(body)
-    msg['Subject'] = subject
-    msg['From'] = settings['smtp_sender']
+import logging
+import smtplib
+from email.mime.multipart import MIMEMultipart
+from email.mime.text import MIMEText
+from email.mime.base import MIMEBase
+from email import encoders
+from bic.core import BIC_DB
+
+log = logging.getLogger(__name__)
+
+def send_client_welcome_email(db_core: BIC_DB, client_id: str):
+    """Sends a fully-configured welcome email to a new client."""
+    client = db_core.find_one('clients', {'id': client_id})
+    if not client or not client.get('email'):
+        log.warning(f"Cannot send welcome email: Client {client_id} has no email address.")
+        return
+
+    # Fetch SMTP settings from the database
+    smtp_host = db_core.get_setting('smtp_host')
+    smtp_port = int(db_core.get_setting('smtp_port', 587))
+    smtp_user = db_core.get_setting('smtp_user')
+    smtp_pass = db_core.get_setting('smtp_pass')
+    from_email = db_core.get_setting('smtp_from_email', smtp_user)
+    email_signature = db_core.get_setting('email_signature', 'Your Network Team')
+
+    if not all([smtp_host, smtp_port, smtp_user, smtp_pass, from_email]):
+        log.error("SMTP settings are incomplete. Cannot send welcome email.")
+        return
+
+    subject = f"Welcome to BGP in the Cloud - Your VPN and BGP Configuration"
+    body = f"""Hello {client['name']},
+
+Welcome!
+
+Attached you will find your configuration files for WireGuard and BGP.
+
+{email_signature}
+"""
+
+    msg = MIMEMultipart()
+    msg['From'] = from_email
     msg['To'] = client['email']
+    msg['Subject'] = subject
+    msg.attach(MIMEText(body, 'plain'))
 
-    # Attachment 1: WireGuard Config
-    wg_conf = client.get('wireguard_conf')
-    if wg_conf:
-        msg.add_attachment(wg_conf, filename="wireguard.conf")
+    # Attach configuration files
+    configs = {
+        "wireguard.conf": client.get('wireguard_conf'),
+        "frr.conf": client.get('bgp_frr_conf'),
+        "client_bird.conf": client.get('bgp_bird_conf')
+    }
 
-    # Attach BGP configs only if the client is a Transit type
-    if client.get('type') == 'Transit':
-        frr_conf = client.get('bgp_frr_conf')
-        if frr_conf:
-            msg.add_attachment(frr_conf, filename="frr.conf")
-
-        bird_conf = client.get('bgp_bird_conf')
-        if bird_conf:
-            msg.add_attachment(bird_conf, filename="client_bird.conf")
-
+    for filename, content in configs.items():
+        if content:
+            part = MIMEBase('application', 'octet-stream')
+            part.set_payload(content.encode('utf-8'))
+            encoders.encode_base64(part)
+            part.add_header('Content-Disposition', f'attachment; filename="{filename}"')
+            msg.attach(part)
+    
     try:
-        with smtplib.SMTP(settings['smtp_server'], int(settings['smtp_port'])) as server:
+        with smtplib.SMTP(smtp_host, smtp_port) as server:
             server.starttls()
-            server.login(settings['smtp_user'], settings['smtp_password'])
+            server.login(smtp_user, smtp_pass)
             server.send_message(msg)
-        
-        console.print(f"[blue]✉️  Welcome email with all configs successfully sent to {client['email']}[/blue]")
-        db_core.insert('email_log', {"client_id": client_id, "subject": subject, "body": "Welcome email with configs sent."})
-
+            log.info(f"Successfully sent welcome email to {client['name']} ({client['email']})")
+            db_core.insert('email_log', {'client_id': client_id, 'subject': subject})
     except Exception as e:
-        console.print(f"[bold red]Failed to send welcome email: {e}[/bold red]")
+        log.error(f"Failed to send welcome email to {client['email']}: {e}")

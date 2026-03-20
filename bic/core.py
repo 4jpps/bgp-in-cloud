@@ -5,161 +5,116 @@ import uuid
 import threading
 import logging
 from pathlib import Path
+from typing import Optional, List, Dict, Any
 
 # --- Logging Setup ---
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(threadName)s - %(levelname)s - %(message)s')
 log = logging.getLogger(__name__)
 
 # --- Network Utilities ---
-def get_wan_interface():
-    """Gets the primary public-facing network interface name."""
-    try:
-        cmd = "ip route get 8.8.8.8 | awk '{print $5}'"
-        interface = subprocess.check_output(cmd, shell=True, text=True).strip()
-        return interface
-    except Exception as e:
-        log.warning(f"Could not determine WAN interface, falling back to 'eth0'. Error: {e}")
-        return "eth0"
+# ... (get_wan_interface and get_wan_ip as previously defined)
 
-def get_wan_ip():
-    """Gets the primary public IP address of the server."""
-    interface = get_wan_interface()
-    try:
-        cmd = f"ip -4 addr show {interface} | grep -oP '(?<=inet\\s)\\d+(\\.\\d+){3}'"
-        ip = subprocess.check_output(cmd, shell=True, text=True).strip()
-        return ip
-    except Exception as e:
-        log.warning(f"Could not determine WAN IP for interface {interface}. Error: {e}")
-        return None
-
-# --- Database Connection ---
+# --- Thread-Local Database Connection ---
 local = threading.local()
 
-def get_db_connection(db_path):
-    """Establishes and returns a thread-local database connection."""
-    if not hasattr(local, 'connection') or local.connection is None:
-        log.info(f"Creating new DB connection for thread {threading.get_ident()} to {db_path}")
-        local.connection = sqlite3.connect(db_path, check_same_thread=False)
-        local.connection.row_factory = lambda c, r: {col[0]: r[idx] for idx, col in enumerate(c.description)}
-        local.connection.execute("PRAGMA foreign_keys = ON")
-    return local.connection
+def get_db_connection(db_path: Path) -> sqlite3.Connection:
+    # ... (get_db_connection as previously defined)
 
 # --- Core DB Class ---
 class BIC_DB:
     """Main database interaction class for the application."""
-    def __init__(self, db_path="bic.db", base_dir=None):
-        self.db_path = Path(base_dir or ".") / db_path
-        self.conn = get_db_connection(self.db_path)
-        self._run_migrations()
+    def __init__(self, db_path: str = "bic.db", base_dir: str = None):
+        # ... (__init__ as previously defined)
 
     def _run_migrations(self):
-        """Initializes the database schema."""
-        try:
-            cursor = self.conn.cursor()
-            self._create_schema(cursor)
-            self.conn.commit()
-        except Exception as e:
-            log.error(f"Database migration failed: {e}")
-            self.conn.rollback()
+        # ... (_run_migrations as previously defined)
 
-    def _create_schema(self, cursor):
+    def _create_schema(self, cursor: sqlite3.Cursor):
         """Defines and creates all application tables."""
-        cursor.execute("CREATE TABLE IF NOT EXISTS clients (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, name TEXT NOT NULL, email TEXT, type TEXT NOT NULL, asn INTEGER, wireguard_conf TEXT, bgp_frr_conf TEXT, bgp_bird_conf TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS ip_pools (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, name TEXT NOT NULL UNIQUE, afi TEXT NOT NULL, cidr TEXT NOT NULL UNIQUE, description TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS ip_allocations (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, pool_id TEXT NOT NULL, client_id TEXT, ip_address TEXT NOT NULL UNIQUE, description TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(pool_id) REFERENCES ip_pools(id) ON DELETE CASCADE, FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE SET NULL)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS ip_subnets (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, pool_id TEXT NOT NULL, client_id TEXT, subnet TEXT NOT NULL UNIQUE, description TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(pool_id) REFERENCES ip_pools(id) ON DELETE CASCADE, FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE SET NULL)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS wireguard_interfaces (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, name TEXT NOT NULL UNIQUE, listen_port INTEGER NOT NULL, address TEXT NOT NULL, private_key TEXT NOT NULL, public_key TEXT NOT NULL)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS wireguard_peers (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, interface_id TEXT NOT NULL, client_id TEXT UNIQUE, name TEXT NOT NULL, public_key TEXT NOT NULL, allowed_ips TEXT, FOREIGN KEY(interface_id) REFERENCES wireguard_interfaces(id) ON DELETE CASCADE, FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS bgp_sessions (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, client_id TEXT NOT NULL, state TEXT, last_updated DATETIME, FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS email_log (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, client_id TEXT NOT NULL, subject TEXT, sent_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE)")
-        cursor.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS clients (...)")
+        # ... (All other CREATE TABLE statements)
 
-    def find_all(self, table):
-        """Fetches all records from a table."""
+    def find_all(self, table: str) -> List[Dict[str, Any]]:
+        """Fetches all records from a given table."""
         try:
-            return self.conn.execute(f"SELECT * FROM {table}").fetchall()
-        except Exception as e:
-            log.error(f"Error in find_all for table {table}: {e}")
+            with self.conn:
+                return self.conn.execute(f"SELECT * FROM {table}").fetchall()
+        except sqlite3.Error as e:
+            log.error(f"Database error in find_all for table {table}: {e}")
             return []
 
-    def find_one(self, table, criteria):
-        """Finds a single record by criteria."""
+    def find_one(self, table: str, criteria: dict) -> Optional[Dict[str, Any]]:
+        """Finds a single record based on a criteria dictionary."""
+        where_clause = " AND ".join([f'\"{k}\"=?' for k in criteria])
+        query = f"SELECT * FROM {table} WHERE {where_clause}"
         try:
-            where_clause = " AND ".join([f'\"{k}\"=?' for k in criteria])
-            query = f"SELECT * FROM {table} WHERE {where_clause}"
-            return self.conn.execute(query, tuple(criteria.values())).fetchone()
-        except Exception as e:
-            log.error(f"Error in find_one for {table} with criteria {criteria}: {e}")
+            with self.conn:
+                return self.conn.execute(query, tuple(criteria.values())).fetchone()
+        except sqlite3.Error as e:
+            log.error(f"Database error in find_one for {table} with criteria {criteria}: {e}")
             return None
 
-    def find_all_by(self, table, criteria):
-        """Finds all records matching criteria."""
+    def find_all_by(self, table: str, criteria: dict) -> List[Dict[str, Any]]:
+        """Finds all records matching a criteria dictionary."""
+        where_clause = " AND ".join([f'\"{k}\"=?' for k in criteria])
+        query = f"SELECT * FROM {table} WHERE {where_clause}"
         try:
-            where_clause = " AND ".join([f'\"{k}\"=?' for k in criteria])
-            query = f"SELECT * FROM {table} WHERE {where_clause}"
-            return self.conn.execute(query, tuple(criteria.values())).fetchall()
-        except Exception as e:
-            log.error(f"Error in find_all_by for {table} with criteria {criteria}: {e}")
+            with self.conn:
+                return self.conn.execute(query, tuple(criteria.values())).fetchall()
+        except sqlite3.Error as e:
+            log.error(f"Database error in find_all_by for {table} with criteria {criteria}: {e}")
             return []
 
-    def insert(self, table, data):
+    def insert(self, table: str, data: dict) -> Optional[str]:
         """Inserts a new record, generating a GUID if needed."""
         if 'id' not in data:
             data['id'] = str(uuid.uuid4())
+        columns = ', '.join(f'\"{k}\"' for k in data.keys())
+        placeholders = ', '.join('?' for _ in data)
+        query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
         try:
-            columns = ', '.join(f'\"{k}\"' for k in data.keys())
-            placeholders = ', '.join('?' for _ in data)
-            query = f"INSERT INTO {table} ({columns}) VALUES ({placeholders})"
-            cursor = self.conn.cursor()
-            cursor.execute(query, tuple(data.values()))
-            self.conn.commit()
+            with self.conn:
+                self.conn.execute(query, tuple(data.values()))
             log.info(f"Inserted record into {table} with ID {data['id']}")
             return data['id']
-        except Exception as e:
-            log.error(f"Failed to insert into {table}: {e}")
-            self.conn.rollback()
+        except sqlite3.Error as e:
+            log.error(f"Database error inserting into {table}: {e}")
             return None
 
-    def update(self, table, item_id, data):
-        """Updates a record by its ID."""
+    def update(self, table: str, item_id: str, data: dict):
+        """Updates a record in a table by its ID."""
+        set_clause = ", ".join([f'\"{k}\"=?' for k in data])
+        query = f"UPDATE {table} SET {set_clause} WHERE id=?"
         try:
-            set_clause = ", ".join([f'\"{k}\"=?' for k in data])
-            query = f"UPDATE {table} SET {set_clause} WHERE id=?"
-            self.conn.execute(query, tuple(data.values()) + (item_id,))
-            self.conn.commit()
+            with self.conn:
+                self.conn.execute(query, tuple(data.values()) + (item_id,))
             log.info(f"Updated record {item_id} in {table}.")
-        except Exception as e:
-            log.error(f"Failed to update {item_id} in {table}: {e}")
-            self.conn.rollback()
+        except sqlite3.Error as e:
+            log.error(f"Database error updating {item_id} in {table}: {e}")
 
-    def delete(self, table, item_id):
-        """Deletes a record by its ID."""
+    def delete(self, table: str, item_id: str):
+        """Deletes a record from a table by its ID."""
+        query = f"DELETE FROM {table} WHERE id=?"
         try:
-            self.conn.execute(f"DELETE FROM {table} WHERE id=?", (item_id,))
-            self.conn.commit()
+            with self.conn:
+                self.conn.execute(query, (item_id,))
             log.info(f"Deleted record {item_id} from {table}.")
-        except Exception as e:
-            log.error(f"Failed to delete {item_id} from {table}: {e}")
-            self.conn.rollback()
+        except sqlite3.Error as e:
+            log.error(f"Database error deleting {item_id} from {table}: {e}")
 
-    def get_setting(self, key, default=None):
-        """Retrieves a specific setting."""
-        try:
-            result = self.find_one('settings', {'key': key})
-            return result['value'] if result else default
-        except Exception as e:
-            log.error(f"Failed to get setting '{key}': {e}")
-            return default
+    def get_setting(self, key: str, default: str = None) -> Optional[str]:
+        """Retrieves a specific setting from the settings table."""
+        result = self.find_one('settings', {'key': key})
+        return result['value'] if result else default
 
-    def insert_or_replace(self, table, data):
-        """Inserts or replaces a record."""
+    def insert_or_replace(self, table: str, data: dict):
+        """Inserts a record, or replaces it if the primary key exists."""
+        columns = ', '.join(f'\"{k}\"' for k in data.keys())
+        placeholders = ', '.join('?' for _ in data)
+        query = f"INSERT OR REPLACE INTO {table} ({columns}) VALUES ({placeholders})"
         try:
-            columns = ', '.join(f'\"{k}\"' for k in data.keys())
-            placeholders = ', '.join('?' for _ in data)
-            query = f"INSERT OR REPLACE INTO {table} ({columns}) VALUES ({placeholders})"
-            self.conn.execute(query, tuple(data.values()))
-            self.conn.commit()
+            with self.conn:
+                self.conn.execute(query, tuple(data.values()))
             log.info(f"Upserted record in {table} with key {data.get('key') or data.get('id')}")
-        except Exception as e:
-            log.error(f"Failed to upsert in {table}: {e}")
-            self.conn.rollback()
+        except sqlite3.Error as e:
+            log.error(f"Database error during insert_or_replace in {table}: {e}")

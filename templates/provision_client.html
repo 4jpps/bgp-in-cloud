@@ -45,6 +45,8 @@
 </form>
 
 <script>
+const pools = JSON.parse('{{ pools_json|safe }}');
+
 function toggleAsnField() {
     const clientType = document.getElementById('client_type').value;
     const asnField = document.getElementById('asn-field');
@@ -61,15 +63,20 @@ function addAssignment() {
     div.className = 'p-4 border rounded-md bg-gray-50 dark:bg-gray-800';
     div.id = assignmentId;
 
+    const poolOptions = pools.map(pool => {
+        const prefix = pool.cidr.split('/')[1];
+        const value = `${pool.id}_${pool.afi}_${prefix}`;
+        const label = pool.description || pool.name;
+        return `<option value="${value}">${label}</option>`;
+    }).join('');
+
     div.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
             <div>
                 <label for="assignment_pool_id_${assignmentIndex}">Pool:</label>
                 <select name="assignment_pool_id[]" id="assignment_pool_id_${assignmentIndex}" onchange="handlePoolChange(this, '${assignmentId}')" required>
                     <option value="">-- Select Pool --</option>
-                    {% for pool in pools %}
-                        <option value="{{ pool.id }}_{{ pool.afi }}_{{ pool.cidr.split('/')[1] }}">{{ pool.description or pool.name }}</option>
-                    {% endfor %}
+                    ${poolOptions}
                 </select>
             </div>
             <div>

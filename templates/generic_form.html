@@ -9,17 +9,21 @@
     <div class="card mb-6">
         <h2 class="text-xl font-semibold mb-4">Client Details</h2>
         {% for field in fields %}
-            {% if field.type != 'hidden' %}
-            <div class="mb-4">
-                <label for="{{ field.name }}" class="block mb-1">{{ field.label }}:</label>
-                <select id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
-                    {% for opt in field.options %}
-                        <option value="{{ opt.value }}" {% if data.get(field.name) == opt.value.split('_')[0] %}selected{% endif %}>{{ opt.label }}</option>
-                    {% endfor %}
-                </select>
-            </div>
+            {% if field.type == 'hidden' %}
+                <input type="hidden" id="{{ field.name }}" name="{{ field.name }}" value="{{ data.get(field.name, '') }}">
             {% else %}
-            <input type="hidden" id="{{ field.name }}" name="{{ field.name }}" value="{{ data.get(field.name, '') }}">
+                <div class="mb-4">
+                    <label for="{{ field.name }}" class="block mb-1">{{ field.label }}:</label>
+                    {% if field.type == "select" %}
+                        <select id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
+                            {% for opt in field.options %}
+                                <option value="{{ opt.value }}" {% if data.get(field.name) and data.get(field.name)|string == opt.value|string %}selected{% endif %}>{{ opt.label }}</option>
+                            {% endfor %}
+                        </select>
+                    {% else %}
+                        <input type="{{ field.type }}" id="{{ field.name }}" name="{{ field.name }}" value="{{ data.get(field.name, '') }}" {% if field.required %}required{% endif %}>
+                    {% endif %}
+                </div>
             {% endif %}
         {% endfor %}
     </div>
@@ -60,6 +64,7 @@
 </form>
 
 <script>
+const pools = JSON.parse('{{ pools_json|safe }}');
 let assignmentIndex = 0;
 
 function addAssignment() {
@@ -70,11 +75,12 @@ function addAssignment() {
     div.className = 'p-4 border rounded-md bg-gray-50 dark:bg-gray-800';
     div.id = assignmentId;
 
-    const poolOptions = `
-        {% for pool in pools %}
-            <option value="{{ pool.id }}_{{ pool.afi }}_{{ pool.cidr.split('/')[1] }}">{{ pool.description or pool.name }}</option>
-        {% endfor %}
-    `;
+    const poolOptions = pools.map(pool => {
+        const prefix = pool.cidr.split('/')[1];
+        const value = `${pool.id}_${pool.afi}_${prefix}`;
+        const label = pool.description || pool.name;
+        return `<option value="${value}">${label}</option>`;
+    }).join('');
 
     div.innerHTML = `
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">

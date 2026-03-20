@@ -89,7 +89,8 @@ async def render_page(request: Request, path: str, db: BIC_DB = Depends(get_db))
                         field.options = field.options_loader(db)
         context["fields"] = ui_item.item.form_fields
         # Also pass pools for the dynamic assignment form
-        context["pools"] = db.find_all("ip_pools")
+        pools = db.find_all("ip_pools")
+        context["pools_json"] = json.dumps(pools)
         return templates.TemplateResponse("generic_form.html", context)
 
     raise HTTPException(status_code=404, detail="Invalid page type")
@@ -124,7 +125,7 @@ async def handle_form_post(request: Request, path: str, db: BIC_DB = Depends(get
 async def provision_client_form(request: Request, db: BIC_DB = Depends(get_db)):
     settings = system_management.get_all_settings(db)
     pools = db.find_all("ip_pools")
-    return templates.TemplateResponse("provision_client.html", {"request": request, "settings": settings, "pools": pools, "menu": menu_structure, "current_path": "/clients/provision/new", "version": __version__})
+    return templates.TemplateResponse("provision_client.html", {"request": request, "settings": settings, "pools_json": json.dumps(pools), "menu": menu_structure, "current_path": "/clients/provision/new", "version": __version__})
 
 @app.post("/clients/provision/new", response_class=RedirectResponse)
 async def handle_provision_client(request: Request, db: BIC_DB = Depends(get_db)):

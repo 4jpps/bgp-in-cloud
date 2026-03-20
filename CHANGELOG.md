@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1439
+
+-   **Bugfix:** Corrected the UI routing configuration to resolve a `404 Not Found` error on the login page.
+
 ## Version 2026.03.20.1437
 
 -   **Bugfix:** Added the missing `Jinja2` dependency to `requirements.txt` to resolve a startup `AssertionError`.

@@ -18,6 +18,7 @@ app = FastAPI()
 BASE_DIR = Path(__file__).resolve().parent
 app.mount("/static", StaticFiles(directory=str(BASE_DIR.parent / "static")), name="static")
 templates = Jinja2Templates(directory=str(BASE_DIR.parent / "templates"))
+templates.env.globals['datetime'] = datetime
 
 # In-memory cache for update info
 update_cache = {

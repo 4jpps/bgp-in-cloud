@@ -31,8 +31,9 @@ def regenerate_client_configs(db_core: BIC_DB, client_id: str):
 def update_client_details(db_core: BIC_DB, client_id: str, **form_data):
     """Updates a client's details and processes new IP/subnet assignments."""
     log.info(f"Updating details for client {client_id}")
+    client_name = form_data.get('name')
     db_core.update('clients', client_id, {
-        'name': form_data.get('name'),
+        'name': client_name,
         'email': form_data.get('email'),
         'type': form_data.get('type')
     })
@@ -49,7 +50,6 @@ def update_client_details(db_core: BIC_DB, client_id: str, **form_data):
         if i < len(assignment_types) and pool_val:
             pool_id = pool_val.split('_')[0]
             assign_type = assignment_types[i]
-            client_name = form_data.get('name')
             if assign_type == 'static':
                 ip = network_management.get_next_available_ip_in_pool(db_core, pool_id)
                 if ip: db_core.insert('ip_allocations', {'pool_id': pool_id, 'client_id': client_id, 'ip_address': ip, 'description': f'Static IP for {client_name}'})
@@ -61,8 +61,25 @@ def update_client_details(db_core: BIC_DB, client_id: str, **form_data):
 
 def deprovision_and_delete_client(db_core: BIC_DB, client_id: str):
     """Deletes a client and all of their associated resources."""
-    # ... (full, correct implementation)
+    log.info(f"Deprovisioning and deleting client {client_id}")
+    db_core.delete("clients", client_id)
+    bgp_management.update_server_bgp_config(db_core)
+    wg_interface = db_core.find_one("wireguard_interfaces", {"name": "wg1"})
+    if wg_interface:
+        wireguard_management.write_server_config_from_db(db_core, wg_interface['id'])
 
 def provision_new_client(db_core: BIC_DB, **form_data):
     """Creates a new client and provisions their initial resources."""
-    # ... (full, correct implementation)
+    client_name = form_data.get('client_name')
+    log.info(f"Provisioning new client: {client_name}")
+    client_data = {
+        "name": client_name,
+        "email": form_data.get('client_email'),
+        "type": form_data.get('client_type'),
+        "asn": form_data.get('asn') if form_data.get('client_type') == 'Transit' else None
+    }
+    client_id = db_core.insert("clients", client_data)
+    if client_id:
+        # Now that the client exists, process their IP/Subnet assignments
+        update_client_details(db_core, client_id, **form_data)
+    return client_id

@@ -1,81 +1,84 @@
-# BIC IPAM Module Development Guide
+# Module Development Guide
 
-This guide provides technical standards and best practices for writing functions within the `bic/modules/` directory. Adhering to these standards is crucial for maintaining the stability and consistency of the application.
+This guide explains how to extend the BGP in Cloud IPAM application by creating new modules.
 
----
+## 1. Module Structure
 
-## Core Principles
+Each functional area of the application is organized into a module. A module typically consists of:
 
-1.  **Pure Business Logic**: Modules in this directory must contain *only* business logic. They should have no knowledge of the user interface. Functions should not print to the console (unless for specific, unavoidable error logging), nor should they contain any HTML, Textual widgets, or other presentation-layer code.
+-   A `_management.py` file containing the core business logic.
+-   A `_ui.py` file defining the UI structure, including menus, views, and actions.
 
-2.  **Database is the Entry Point**: All module functions that interact with data should accept the `db_core: BIC_DB` object as their first argument. This dependency injection ensures that all database operations go through the centralized `BIC_DB` class in `bic/core.py`.
+## 2. Creating a New Module
 
-3.  **Stateless Operations**: Functions should be as stateless as possible. All the information they need to perform an operation should be passed in as arguments. They should read from the database for state and write back to the database to persist changes.
+1.  **Create a Management File:**
 
----
+    -   Create a new file in the `bic/modules` directory (e.g., `my_module_management.py`).
+    -   Implement the functions that will handle the business logic for your module.
 
-## Function Signatures and Return Values
+2.  **Create a UI File:**
 
-To ensure compatibility with the generic UI rendering engines, your handler functions should follow these conventions.
+    -   Create a new file in the `bic/ui` directory (e.g., `my_module_ui.py`).
+    -   Define the UI structure for your module using the `UIMenu`, `UIView`, and `UIAction` classes from `bic/ui/schema.py`.
 
-### For `UIView` Handlers
+3.  **Integrate the Module:**
 
-These functions are used to fetch lists of data for display in tables.
+    -   In `bic/ui/main.py`, import your new UI menu and add it to the `main_menu`.
 
-- **Signature**: `def my_list_handler(db_core: BIC_DB) -> list[dict]:`
-- **Returns**: The function **must** return a `list` of `dict`s. Each dictionary in the list represents a row, and the keys of the dictionary should correspond to the `key` values you define in the `UIView`'s `columns`.
+## 3. UI Schema
 
-```python
-# In bic/modules/client_management.py
+-   **`UIMenu`:** Represents a menu in the navigation structure.
+-   **`UIMenuItem`:** A single item within a menu, which can link to a `UIView` or another `UIMenu`.
+-   **`UIView`:** A page that displays information. It can have a `loader` function to fetch data and a `handler` to process data for display.
+-   **`UIAction`:** A form that performs an action. It has a `handler` function to process the form data.
 
-def list_all_clients(db_core: BIC_DB) -> list[dict]:
-    """Returns a list of all clients."""
-    # The find_all method conveniently returns a list of dicts.
-    return db_core.find_all("clients")
-```
+## 4. Example: Creating a "Hello World" Module
 
-### For `UIAction` Handlers
+1.  **`bic/modules/hello_management.py`:**
 
-These functions process form submissions.
+    ```python
+    def get_hello_message():
+        return "Hello, World!"
+    ```
 
-- **Signature**: `def my_action_handler(db_core: BIC_DB, **kwargs):`
-- **Arguments**: The function will receive all the fields from the form as keyword arguments (`kwargs`). The names of the arguments will match the `name` you gave each `FormField` in your `UIAction` definition.
-- **Returns**: The function should return a `dict` with at least a `"success": True` or `"success": False` key. You can also include a `"message"` key for displaying errors to the user.
+2.  **`bic/ui/hello_ui.py`:**
 
-```python
-# In bic/modules/network_management.py
+    ```python
+    from bic.ui.schema import UIMenu, UIMenuItem, UIView
+    from bic.modules import hello_management
 
-def add_pool(db_core: BIC_DB, name: str, cidr: str, description: str):
-    """Adds a new IP pool to the database."""
-    try:
-        net = ipaddress.ip_network(cidr)
-        # ... (logic to add the pool)
-        db_core.insert('ip_pools', {...})
-        update_bird_configs(db_core)
-        return {"success": True, "message": f"IP Pool '{name}' created."}
-    except ValueError as e:
-        return {"success": False, "message": str(e)}
-```
+    hello_view = UIView(
+        name="Hello",
+        template="hello.html",
+        handler=hello_management.get_hello_message,
+    )
 
-### For `UIAction` Loaders
+    hello_menu = UIMenu(
+        name="Hello",
+        items=[
+            UIMenuItem(name="Say Hello", path="/say-hello", item=hello_view),
+        ]
+    )
+    ```
 
-These optional functions pre-populate forms with data (e.g., for an "Edit" screen).
+3.  **`bic/ui/main.py`:**
 
-- **Signature**: `def my_loader_function(db_core: BIC_DB, id: int) -> dict:`
-- **Arguments**: The function typically receives the `id` of the item to load.
-- **Returns**: It **must** return a single `dict` containing the data for the item. The keys should match the `name`s of the `FormField`s in the form.
+    ```python
+    # ... imports
+    from .hello_ui import hello_menu
 
-```python
-# In bic/ui/clients.py (Loaders can also be defined here if they are simple)
+    main_menu = UIMenu(
+        # ... other items
+        UIMenuItem(name="Hello", path="hello", item=hello_menu),
+    )
+    ```
 
-def load_client_for_edit(db_core: BIC_DB, id: int):
-    return db_core.find_one("clients", {"id": id})
-```
+4.  **`templates/hello.html`:**
 
----
-
-## Interacting with Other Modules
-
-It is common and encouraged for a module function to call functions in other modules. For example, the `provision_new_client` function in `client_management.py` is an orchestrator that calls functions in `network_management`, `wireguard_management`, `bgp_management`, and `email_notifications` to perform its complex task.
-
-This practice keeps each module focused on its specific domain while allowing you to build powerful, high-level workflows.
+    ```html
+    {% extends "base.html" %}
+    {% block title %}Hello{% endblock %}
+    {% block content %}
+        <h1>{{ list_data }}</h1>
+    {% endblock %}
+    ```

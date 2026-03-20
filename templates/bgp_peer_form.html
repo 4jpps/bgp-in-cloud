@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.name }}{% endblock %}
+
+{% block content %}
+<section>
+    <h1>{{ item.name }}</h1>
+
+    <form method="post" action="/action/{{ request.path_params.path if request.path_params else item.path }}">
+        {% for field in item.form_fields %}
+            <div class="form-group">
+                <label for="{{ field.name }}">{{ field.label }}</label>
+                {% if field.type == 'checkbox' %}
+                    <input type="checkbox" id="{{ field.name }}" name="{{ field.name }}" value="true" {% if data and data.get(field.name) %}checked{% endif %}>
+                {% elif field.type == 'select' %}
+                    <select id="{{ field.name }}" name="{{ field.name }}">
+                        <option value="">-- None --</option>
+                        {% for option in field.options %}
+                            <option value="{{ option.value }}" {% if data and data.get(field.name) == option.value %}selected{% endif %}>{{ option.label }}</option>
+                        {% endfor %}
+                    </select>
+                {% else %}
+                    <input type="{{ field.type or 'text' }}" 
+                           id="{{ field.name }}" 
+                           name="{{ field.name }}" 
+                           value="{{ (data.get(field.name) if data else '') or field.default or '' }}" 
+                           {% if field.required %}required{% endif %}>
+                {% endif %}
+                {% if field.help_text %}
+                    <small>{{ field.help_text }}</small>
+                {% endif %}
+            </div>
+        {% endfor %}
+        <button type="submit">Submit</button>
+    </form>
+</section>
+{% endblock %}

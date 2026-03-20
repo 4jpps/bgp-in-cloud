@@ -1,0 +1,59 @@
+{% extends "base.html" %}
+
+{% block title %}Manage YubiKeys for {{ data.username }}{% endblock %}
+
+{% block content %}
+<section>
+    <h1>Manage YubiKeys for {{ data.username }}</h1>
+
+    <div id="yubikey-list">
+        <!-- YubiKeys will be listed here -->
+    </div>
+
+    <form id="register-yubikey-form">
+        <label for="yubikey-otp">YubiKey OTP:</label>
+        <input type="text" id="yubikey-otp" name="otp" required>
+        <button type="submit">Register New YubiKey</button>
+    </form>
+
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const userId = "{{ data.id }}";
+
+        async function listYubiKeys() {
+            // In a real app, you would fetch the user's YubiKeys from the server
+            // and render them here. For this example, we'll just show a message.
+            document.getElementById('yubikey-list').innerHTML = "<p>YubiKey management is not fully implemented in this demo.</p>";
+        }
+
+        document.getElementById('register-yubikey-form').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const otp = document.getElementById('yubikey-otp').value;
+
+            try {
+                const response = await fetch(`/api/yubikey/associate/${userId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ otp: otp }),
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    alert('YubiKey registered successfully!');
+                    listYubiKeys();
+                } else {
+                    alert('YubiKey registration failed: ' + result.message);
+                }
+            } catch (e) {
+                console.error('YubiKey registration failed:', e);
+                alert('YubiKey registration failed. See console for details.');
+            }
+        });
+
+        listYubiKeys();
+    });
+</script>
+{% endblock %}

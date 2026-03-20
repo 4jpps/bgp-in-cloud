@@ -16,29 +16,47 @@ class FormField:
     label: str
     type: str = "text"
     required: bool = False
-    options: List[FormSelectOption] = field(default_factory=list)
-    options_loader: Optional[Callable] = None
     default: Optional[Any] = None
     placeholder: Optional[str] = None
+    readonly: bool = False
+    help_text: Optional[str] = None
+    options: List[FormSelectOption] = field(default_factory=list)
+    required_role: Optional[str] = None
+
+    options_loader: Optional[Callable] = None
+
+# --- UI Action & View Definitions ---
+
+@dataclass
+class TableColumn:
+    """Represents a single column in a UI data table."""
+    name: str
+    label: str
 
 # --- UI Action & View Definitions ---
 
 @dataclass
 class UIAction:
-    """Represents a form-based action in the UI (e.g., Edit, Create)."""
+    """Represents an action that can be performed in the UI (e.g., submitting a form)."""
     name: str
     handler: Callable
-    form_fields: List[FormField]
+    form_fields: List[FormField] = field(default_factory=list)
+    redirect_to: Optional[str] = None
+    template: Optional[str] = None
     loader: Optional[Callable] = None
     actions: Optional[List['UIMenuItem']] = field(default_factory=list)
+    required_role: Optional[str] = None
 
 @dataclass
 class UIView:
     """Represents a view of data in the UI (e.g., a list of clients)."""
     name: str
-    handler: Callable
-    columns: List[Dict[str, str]]
+    template: str
+    handler: Optional[Callable] = None
+    loader: Optional[Callable] = None
+    table_columns: List[TableColumn] = field(default_factory=list)
     actions: Optional[List['UIMenuItem']] = field(default_factory=list)
+    context_name: str = "data"
 
 # --- Menu Item & Menu Definitions ---
 
@@ -49,9 +67,11 @@ class UIMenuItem:
     path: str
     item: Optional[Any] = None  # Can be a UIView, UIAction, or UIMenu
     hidden: bool = False
+    required_role: Optional[str] = None
 
 @dataclass
 class UIMenu:
     """Represents a menu, which contains a list of UIMenuItems."""
     name: str
     items: List[UIMenuItem]
+    required_role: Optional[str] = None

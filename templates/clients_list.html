@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.name }}{% endblock %}
+
+{% block content %}
+<section>
+    <h1>{{ item.name }}</h1>
+    <a href="/page/clients/provision" class="button">Provision New Client</a>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Email</th>
+                <th>Type</th>
+                <th>ASN</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for client in list_data %}
+            <tr>
+                <td>{{ client.name }}</td>
+                <td>{{ client.email }}</td>
+                <td>{{ client.type }}</td>
+                <td>{{ client.asn }}</td>
+                <td>
+                    <a href="/page/clients/edit/{{ client.id }}">Edit</a>
+                    <a href="/page/clients/configs/{{ client.id }}">Configs</a>
+                    <a href="/download/wireguard/client/{{ client.id }}">Download Config</a>
+                    <a href="/page/clients/send-email/{{ client.id }}">Send Email</a>
+                    <form action="/action/clients/delete/{{ client.id }}" method="post" style="display:inline;">
+                        <button type="submit" onclick="return confirm('Are you sure?');">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="5">No clients found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

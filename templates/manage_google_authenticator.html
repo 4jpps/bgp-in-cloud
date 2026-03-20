@@ -1,0 +1,42 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Google Authenticator for {{ data.username }}{% endblock %}
+
+{% block content %}
+<section>
+    <h1>Manage Google Authenticator for {{ data.username }}</h1>
+
+    <div id="qr-code-container">
+        <!-- QR code will be displayed here -->
+    </div>
+
+    <button id="generate-secret">Generate New Secret</button>
+
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const userId = "{{ data.id }}";
+
+        document.getElementById('generate-secret').addEventListener('click', async () => {
+            try {
+                const response = await fetch(`/api/google-authenticator/generate-secret/${userId}`);
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('qr-code-container').innerHTML = `
+                        <p>Scan this QR code with your Google Authenticator app:</p>
+                        <img src="data:image/png;base64,${result.qr_code}" alt="QR Code">
+                        <p>Or manually enter this secret: <strong>${result.secret}</strong></p>
+                    `;
+                } else {
+                    alert('Failed to generate secret.');
+                }
+            } catch (e) {
+                console.error('Failed to generate secret:', e);
+                alert('Failed to generate secret. See console for details.');
+            }
+        });
+    });
+</script>
+{% endblock %}

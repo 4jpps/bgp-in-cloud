@@ -1,14 +1,14 @@
 {% extends "base.html" %}
 
-{% block title %}{{ title }}{% endblock %}
+{% block title %}{{ item.name }}{% endblock %}
 
 {% block content %}
 <section>
-    <h1>{{ menu.name }}</h1>
+    <h1>{{ item.name }}</h1>
     <ul>
-        {% for item in menu.items %}
-            {% if not item.hidden %}
-                <li><a href="{% if item.path == '/clients/provision/new' %}/clients/provision/new{% elif item.path == '/system/statistics' %}/system/statistics{% else %}/page{{ item.path }}{% endif %}">{{ item.name }}</a></li>
+        {% for subitem in item.items %}
+            {% if not subitem.hidden %}
+                <li><a href="{{ request.url.path }}/{{ subitem.path }}">{{ subitem.name }}</a></li>
             {% endif %}
         {% endfor %}
     </ul>

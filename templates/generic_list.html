@@ -1,36 +1,56 @@
 {% extends "base.html" %}
 
-{% block title %}{{ view.name }}{% endblock %}
+{% block title %}{{ item.name }} - {{ super() }}{% endblock %}
 
 {% block content %}
-    <h1>{{ view.name }}</h1>
-    {# Add action buttons here if defined #}
-    <table>
-        <thead>
+<h1 class="text-2xl font-bold mb-6">{{ item.name }}</h1>
+
+<div class="card overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800">
             <tr>
-                {% for col in view.columns %}
-                    <th>{{ col.label }}</th>
-                {% endfor %}
-                {% if view.actions %}
-                    <th>Actions</th>
+                {% for column in item.table_columns %}
+                        <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                            {{ column.label }}
+                        </th>
+                    {% endfor %}
+                {% if item.actions %}
+                    <th scope="col" class="relative px-6 py-3">
+                        <span class="sr-only">Actions</span>
+                    </th>
                 {% endif %}
             </tr>
         </thead>
-        <tbody>
-            {% for item in items %}
+        <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+            {% for data_row in list_data %}
             <tr>
-                {% for col in view.columns %}
-                    <td>{{ item[col.key] }}</td>
+                {% for column in item.table_columns %}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {{ data_row[column.name] }}
+                    </td>
                 {% endfor %}
-                {% if view.actions %}
-                    <td>
-                        {% for action in view.actions %}
-                            <a href="{{ url_for('render_page', path=action.path.lstrip('/')) }}?id={{ item.id }}" class="action-button">{{ action.name }}</a>
+                {% if item.actions %}
+                    <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
+                        {% for action in item.actions %}
+                            {% if action.handler %}
+                                <form method="post" action="/action{{ request.url.path }}/{{ action.name.lower() }}/{{ data_row.id }}" class="inline">
+                                    <button type="submit" class="action-button-red">{{ action.name }}</button>
+                                </form>
+                            {% else %}
+                                <a href="/page/{{ action.path.format(id=data_row.id) }}" class="action-button">{{ action.name }}</a>
+                            {% endif %}
                         {% endfor %}
                     </td>
                 {% endif %}
             </tr>
+            {% else %}
+            <tr>
+                <td colspan="{{ item.columns|length + (1 if item.actions else 0) }}" class="px-6 py-4 text-center text-sm text-gray-500">
+                    No items found.
+                </td>
+            </tr>
             {% endfor %}
         </tbody>
     </table>
+</div>
 {% endblock %}

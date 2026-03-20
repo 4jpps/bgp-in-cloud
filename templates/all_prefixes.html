@@ -1,0 +1,34 @@
+{% extends "base.html" %}
+
+{% block title %}All Advertised Prefixes{% endblock %}
+
+{% block content %}
+<section>
+    <h1>All Advertised Prefixes</h1>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Peer</th>
+                <th>Prefix</th>
+                <th>Status</th>
+                <th>Created At</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ad in list_data %}
+            <tr class="{% if ad.blackholed %}blackholed{% endif %}">
+                <td>{{ ad.peer_name }}</td>
+                <td>{{ ad.prefix }}</td>
+                <td>{% if ad.blackholed %}Blackholed{% else %}Active{% endif %}</td>
+                <td>{{ ad.created_at }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4">No prefixes advertised.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

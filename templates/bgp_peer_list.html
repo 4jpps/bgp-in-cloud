@@ -1,0 +1,44 @@
+{% extends "base.html" %}
+
+{% block title %}BGP Peers{% endblock %}
+
+{% block content %}
+<section>
+    <h1>BGP Peers</h1>
+    <a href="/page/bgp/add" class="button">Add BGP Peer</a>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Hostname</th>
+                <th>ASN</th>
+                <th>Enabled</th>
+                <th>WireGuard Tunnel</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for peer in list_data %}
+            <tr>
+                <td>{{ peer.name }}</td>
+                <td>{{ peer.hostname }}</td>
+                <td>{{ peer.asn }}</td>
+                <td>{{ 'Yes' if peer.enabled else 'No' }}</td>
+                <td>{{ peer.wireguard_tunnel or '' }}</td>
+                <td>
+                    <a href="/page/bgp/edit/{{ peer.id }}">Edit</a>
+                    <a href="/page/bgp/prefixes/manage/{{ peer.id }}">Manage Prefixes</a>
+                    <form action="/action/bgp/delete/{{ peer.id }}" method="post" style="display:inline;">
+                        <button type-="submit" onclick="return confirm('Are you sure?');">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="6">No BGP peers found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

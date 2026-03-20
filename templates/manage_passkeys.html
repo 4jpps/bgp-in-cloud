@@ -1,0 +1,54 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Passkeys for {{ data.username }}{% endblock %}
+
+{% block content %}
+<section>
+    <h1>Manage Passkeys for {{ data.username }}</h1>
+
+    <div id="passkey-list">
+        <!-- Passkeys will be listed here -->
+    </div>
+
+    <button id="register-passkey">Register New Passkey</button>
+
+</section>
+
+<script>
+    document.addEventListener('DOMContentLoaded', function () {
+        const userId = "{{ data.id }}";
+
+        async function listPasskeys() {
+            // In a real app, you would fetch the user's passkeys from the server
+            // and render them here. For this example, we'll just show a message.
+            document.getElementById('passkey-list').innerHTML = "<p>Passkey management is not fully implemented in this demo.</p>";
+        }
+
+        document.getElementById('register-passkey').addEventListener('click', async () => {
+            // 1. Get registration options from the server
+            const response = await fetch(`/api/passkey/register/options/${userId}`);
+            const options = await response.json();
+
+            // 2. Use the browser's WebAuthn API to create a new credential
+            try {
+                const credential = await navigator.credentials.create({ publicKey: options });
+
+                // 3. Send the new credential to the server for verification
+                await fetch(`/api/passkey/register/verify/${userId}`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(credential.toJSON()),
+                });
+
+                alert('Passkey registered successfully!');
+                listPasskeys();
+            } catch (e) {
+                console.error('Passkey registration failed:', e);
+                alert('Passkey registration failed. See console for details.');
+            }
+        });
+
+        listPasskeys();
+    });
+</script>
+{% endblock %}

@@ -1,111 +1,159 @@
+#!/usr/bin/env python
+"""
+This module provides functions for gathering and summarizing various system,
+network, and application statistics.
+"""
+
 import psutil
 import shutil
-import subprocess
-import os
-import sys
 import ipaddress
-from bic.core import BIC_DB, get_wan_interface
-from bic.modules.network_management import get_pool_usage
+from bic.core import BIC_DB, get_logger, get_wan_interface
 
-def _format_bytes(byte_count):
-    """Formats bytes into a human-readable string (KB, MB, GB)."""
+# Initialize logger
+log = get_logger(__name__)
+
+def _format_bytes(byte_count: int | None) -> str:
+    """Formats a byte count into a human-readable string (B, KB, MB, GB, TB).
+
+    Args:
+        byte_count: The number of bytes to format.
+
+    Returns:
+        A formatted string with the appropriate unit, or "N/A" if input is None.
+    """
     if byte_count is None:
         return "N/A"
     power = 1024
     n = 0
-    power_labels = {0: '', 1: 'K', 2: 'M', 3: 'G', 4: 'T'}
-    while byte_count >= power and n < len(power_labels):
+    power_labels = {0: 'B', 1: 'KB', 2: 'MB', 3: 'GB', 4: 'TB'}
+    while byte_count >= power and n < len(power_labels) - 1:
         byte_count /= power
         n += 1
-    return f"{byte_count:.2f} {power_labels[n]}B"
+    return f"{byte_count:.2f} {power_labels[n]}"
+
+def _get_database_stats(db_core: BIC_DB) -> dict:
+    """Collects statistics related to the database."""
+    log.info("Gathering database statistics.")
+    # Use the thread-safe count method from the core
+    total_clients = db_core.count("clients")
+    total_pools = db_core.count("ip_pools")
+    total_allocations = db_core.count("ip_allocations")
+    # Count subnets by looking for allocations containing a '/'
+    total_subnets = db_core.count("ip_allocations", where_clause="address LIKE ?", params=('%/%',))
+
+    return {
+        'total_clients': total_clients,
+        'total_pools': total_pools,
+        'total_allocations': total_allocations,
+        'total_subnets': total_subnets,
+    }
+
+def _get_pool_stats(db_core: BIC_DB) -> list:
+    """Collects usage statistics for each IP pool."""
+    log.info("Gathering IP pool statistics.")
+    pool_details = []
+    pools = db_core.find_all('ip_pools')
+    for pool in pools:
+        try:
+            network = ipaddress.ip_network(pool['cidr'])
+            total_ips = network.num_addresses
+
+            # Get all allocations for this pool
+            allocations = db_core.find_all("ip_allocations", {"pool_id": pool['id']})
+            
+            allocated_ips_count = 0
+            for alloc in allocations:
+                try:
+                    allocated_network = ipaddress.ip_network(alloc['address'])
+                    allocated_ips_count += allocated_network.num_addresses
+                except ValueError:
+                    log.warning(f"Invalid address '{alloc['address']}' in pool {pool['id']} allocations.")
+
+            usage_percentage = (allocated_ips_count / total_ips) * 100 if total_ips > 0 else 0
+
+            pool_details.append({
+                'id': pool['id'],
+                'name': pool['name'],
+                'cidr': pool['cidr'],
+                'total_ips': total_ips,
+                'allocated_ips': allocated_ips_count,
+                'usage': f"{usage_percentage:.2f}%"
+            })
+        except Exception as e:
+            log.error(f"Could not process pool {pool['id']} ({pool['name']}): {e}", exc_info=True)
+            continue
+    return pool_details
+
+def _get_system_stats() -> dict:
+    """Collects general system statistics like CPU, memory, and disk usage."""
+    log.info("Gathering system statistics.")
+    return {
+        'cpu_load': psutil.cpu_percent(interval=0.1),
+        'mem_percent': psutil.virtual_memory().percent,
+        'disk_percent': psutil.disk_usage('/').percent
+    }
+
+def _get_network_stats() -> dict:
+    """Collects network I/O statistics for the primary WAN interface."""
+    log.info("Gathering network statistics.")
+    wan_interface = get_wan_interface()
+    if wan_interface:
+        net_io = psutil.net_io_counters(pernic=True).get(wan_interface)
+        if net_io:
+            return {
+                'bytes_sent': _format_bytes(net_io.bytes_sent),
+                'bytes_recv': _format_bytes(net_io.bytes_recv),
+                'wan_interface': wan_interface
+            }
+    log.warning("Could not retrieve network statistics.")
+    return {'bytes_sent': 'N/A', 'bytes_recv': 'N/A', 'wan_interface': 'N/A'}
 
 def gather_all_statistics(db_core: BIC_DB) -> dict:
-    """A master function to collect and return all system statistics robustly."""
+    """A master function to collect and return all system statistics.
+
+    This function acts as an orchestrator, calling various private helper
+    functions to gather different categories of statistics (database, IP pools,
+    system load, network I/O). Each helper call is wrapped in its own
+    try...except block to ensure that a failure in one area does not prevent
+    the others from being reported.
+
+    Args:
+        db_core: An instance of the BIC_DB database core.
+
+    Returns:
+        A dictionary containing all gathered statistics. Keys for failed sections
+        will have a value of 'N/A' or an empty list.
+    """
+    log.info("--- Starting statistics gathering run ---")
     stats = {}
 
     # --- Database Stats ---
     try:
-        stats['total_clients'] = db_core.conn.execute("SELECT COUNT(*) FROM clients").fetchone()[0]
-        stats['total_pools'] = db_core.conn.execute("SELECT COUNT(*) FROM ip_pools").fetchone()[0]
-        stats['total_allocations'] = db_core.conn.execute("SELECT COUNT(*) FROM ip_allocations").fetchone()[0]
-        stats['total_subnets'] = db_core.conn.execute("SELECT COUNT(*) FROM ip_subnets").fetchone()[0]
+        stats.update(_get_database_stats(db_core))
     except Exception as e:
-        print(f"Could not get database stats: {e}", file=sys.stderr)
+        log.error(f"Could not get database stats: {e}", exc_info=True)
         stats.update({'total_clients': 'N/A', 'total_pools': 'N/A', 'total_allocations': 'N/A', 'total_subnets': 'N/A'})
 
-    # --- Pool Usage and Availability Stats ---
-    stats['pool_details'] = []
+    # --- Pool Usage Stats ---
     try:
-        pools = db_core.find_all('ip_pools')
-        for pool in pools:
-            pool_detail = get_pool_usage(db_core, pool['id'])
-            try:
-                network = ipaddress.ip_network(pool['cidr'])
-                total_ips = network.num_addresses
-                
-                # Count allocated single IPs
-                allocated_single_ips = db_core.conn.execute(
-                    "SELECT COUNT(*) FROM ip_allocations WHERE pool_id = ?", (pool['id'],)
-                ).fetchone()[0]
-                pool_detail['available_single_ips'] = total_ips - allocated_single_ips
-
-                # Count available subnets of common sizes
-                allocated_subnets = [
-                    ipaddress.ip_network(s['subnet'])
-                    for s in db_core.find_all_by('ip_subnets', {'pool_id': pool['id']})
-                ]
-                
-                available_subnets = {}
-                prefix_key = 'ipv6_prefix_sizes' if network.version == 6 else 'ipv4_prefix_sizes'
-                # Use some common defaults if not defined
-                common_prefixes = {
-                    'ipv4_prefix_sizes': [29, 27],
-                    'ipv6_prefix_sizes': [64, 56]
-                }
-                for prefix_len in common_prefixes.get(prefix_key, []):
-                    count = 0
-                    for subnet in network.subnets(new_prefix=prefix_len):
-                        is_available = True
-                        for existing in allocated_subnets:
-                            if subnet.overlaps(existing):
-                                is_available = False
-                                break
-                        if is_available:
-                            count += 1
-                    available_subnets[f"/{prefix_len}"] = count
-                pool_detail['available_subnets'] = available_subnets
-
-            except Exception as e:
-                print(f"Could not calculate availability for pool {pool['id']}: {e}", file=sys.stderr)
-                pool_detail['available_single_ips'] = 'N/A'
-                pool_detail['available_subnets'] = {}
-
-            stats['pool_details'].append(pool_detail)
-
+        stats['pool_details'] = _get_pool_stats(db_core)
     except Exception as e:
-        print(f"Could not get pool stats: {e}", file=sys.stderr)
+        log.error(f"Could not get pool stats: {e}", exc_info=True)
+        stats['pool_details'] = []
 
     # --- System Stats ---
     try:
-        stats['cpu_load'] = psutil.cpu_percent(interval=0.5)
-        stats['mem_percent'] = psutil.virtual_memory().percent
-        disk_usage = shutil.disk_usage("/")
-        stats['disk_percent'] = (disk_usage.used / disk_usage.total) * 100
+        stats.update(_get_system_stats())
     except Exception as e:
-        print(f"Could not get system stats: {e}", file=sys.stderr)
+        log.error(f"Could not get system stats: {e}", exc_info=True)
         stats.update({'cpu_load': 'N/A', 'mem_percent': 'N/A', 'disk_percent': 'N/A'})
 
     # --- Network Stats ---
     try:
-        wan_interface = get_wan_interface()
-        if wan_interface:
-            net_io = psutil.net_io_counters(pernic=True).get(wan_interface)
-            stats['bytes_sent'] = _format_bytes(net_io.bytes_sent)
-            stats['bytes_recv'] = _format_bytes(net_io.bytes_recv)
-        else:
-            stats.update({'bytes_sent': 'N/A', 'bytes_recv': 'N/A'})
+        stats.update(_get_network_stats())
     except Exception as e:
-        print(f"Could not get network stats: {e}", file=sys.stderr)
-        stats.update({'bytes_sent': 'N/A', 'bytes_recv': 'N/A'})
-
+        log.error(f"Could not get network stats: {e}", exc_info=True)
+        stats.update({'bytes_sent': 'N/A', 'bytes_recv': 'N/A', 'wan_interface': 'N/A'})
+    
+    log.info("--- Finished statistics gathering run ---")
     return stats

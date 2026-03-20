@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.name }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<h1 class="text-2xl font-bold mb-6">{{ data.title or item.name }}</h1>
+
+<div class="card">
+    <pre><code>{{ data.content }}</code></pre>
+</div>
+
+<div class="mt-6">
+    <a href="{{ request.headers.get('referer', '/') }}" class="action-button">Back</a>
+</div>
+
+{% endblock %}

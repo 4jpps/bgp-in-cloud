@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+
+{% block title %}Audit Log{% endblock %}
+
+{% block content %}
+<section>
+    <h1>Audit Log</h1>
+
+    <form method="get" action="/page/system/audit" class="search-form">
+        <input type="search" name="search" placeholder="Search logs..." value="{{ request.query_params.get('search', '') }}">
+        <button type="submit">Search</button>
+    </form>
+
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Timestamp</th>
+                <th>User</th>
+                <th>Action</th>
+                <th>Details</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for log_entry in list_data %}
+            <tr>
+                <td>{{ log_entry.timestamp }}</td>
+                <td>{{ log_entry.username or 'System' }}</td>
+                <td>{{ log_entry.action }}</td>
+                <td>{{ log_entry.details }}</td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4">No audit logs found.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

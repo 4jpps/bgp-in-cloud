@@ -1,0 +1,46 @@
+{% extends "base.html" %}
+
+{% block title %}BGP Status Dashboard{% endblock %}
+
+{% block content %}
+<section>
+    <h1>BGP Status Dashboard</h1>
+
+    {% if list_data.error %}
+        <div class="error-box">
+            <h2>Error Fetching BGP Status</h2>
+            <p>{{ list_data.error }}</p>
+            <p>Please ensure that FRR is running and that the application has the necessary permissions to execute the `vtysh` command.</p>
+        </div>
+    {% else %}
+        <table class="data-table">
+            <thead>
+                <tr>
+                    <th>Peer Name</th>
+                    <th>Peer Address</th>
+                    <th>ASN</th>
+                    <th>State</th>
+                    <th>Uptime</th>
+                    <th>Prefixes Rcvd</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for peer in list_data %}
+                <tr>
+                    <td>{{ peer.name }}</td>
+                    <td>{{ peer.hostname }}</td>
+                    <td>{{ peer.remoteAs }}</td>
+                    <td class="status-{{ peer.state.lower() }}">{{ peer.state }}</td>
+                    <td>{{ peer.peerUptime }}</td>
+                    <td>{{ peer.pfxRcd }}</td>
+                </tr>
+                {% else %}
+                <tr>
+                    <td colspan="6">No BGP peers found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</section>
+{% endblock %}

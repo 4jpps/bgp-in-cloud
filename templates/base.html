@@ -6,6 +6,12 @@
     <title>{% block title %}BGP in Cloud{% endblock %}</title>
     <link rel="stylesheet" href="{{ url_for('static', path='/css/styles.css') }}">
     <meta name="google" content="notranslate">
+    <style>
+        :root {
+            --color-primary: {{ settings.get('branding_color_primary', '#3b82f6') }};
+            --color-secondary: {{ settings.get('branding_color_secondary', '#10b981') }};
+        }
+    </style>
 </head>
 <body class="bg-gray-100 dark:bg-gray-900 text-gray-900 dark:text-gray-100">
     <!-- Update Notification Toast -->
@@ -31,19 +37,35 @@
 
     <div class="flex h-screen">
         <!-- Sidebar -->
+        {% if current_user %}
         <div class="w-64 bg-white dark:bg-gray-800 p-4 flex flex-col">
-            <h1 class="text-2xl font-bold mb-6">{{ settings.get('branding_company_name', 'Jeff Parrish PC Services') }}</h1>
-            <nav>
+            <div class="mb-6">
+                {% if logo_exists %}
+                <img src="{{ url_for('static', path='assets/logo.png') }}" alt="Company Logo" class="max-h-16 mx-auto mb-4">
+                {% endif %}
+                <h1 class="text-2xl font-bold text-center">{{ settings.get('branding_company_name', 'BGP in Cloud') }}</h1>
+            </div>
+            <nav class="flex-grow">
                 <ul>
                     {% for item in menu.items %}
-                        <li class="mb-2"><a href="/page{{ item.path }}" class="hover:text-blue-500">{{ item.name }}</a></li>
+                        {% if not item.hidden %}
+                        <li class="mb-2"><a href="{{ item.path if item.path.startswith('/') else '/page/' + item.path }}" class="hover:text-blue-500">{{ item.name }}</a></li>
+                        {% endif %}
                     {% endfor %}
                 </ul>
             </nav>
-            <div class="mt-auto text-sm text-gray-500">
-                <p>Copyright &copy; {{ datetime.utcnow().year }} {{ settings.get('branding_company_name', 'Jeff Parrish PC Services') }}. Version: {{ version }}</p>
+            <div class="mt-auto">
+                <div class="text-sm text-gray-500 mb-2">
+                    <p>Logged in as: <strong>{{ current_user.username }}</strong> ({{ current_user.role }})</p>
+                </div>
+                <a href="/logout" class="action-button w-full text-center">Logout</a>
+                <div class="text-sm text-gray-500 mt-4">
+                    <p>Copyright &copy; {{ datetime.utcnow().year }} {{ settings.get('branding_company_name', 'BGP in Cloud') }}.</p>
+                    <p>Version: {{ __version__ }}</p>
+                </div>
             </div>
         </div>
+        {% endif %}
 
         <!-- Main Content -->
         <main class="flex-1 p-6 overflow-y-auto">

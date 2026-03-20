@@ -1,147 +1,49 @@
 {% extends "base.html" %}
 
-{% block title %}{{ action.name }}{% endblock %}
+{% block title %}{{ item.name }} - {{ super() }}{% endblock %}
 
 {% block content %}
-<h1 class="text-2xl font-bold mb-6">{{ action.name }}</h1>
+<h1 class="text-2xl font-bold mb-6">{{ item.name }}</h1>
 
-<form method="post" action="{{ url_for('handle_form_post', path=current_path.lstrip('/')) }}">
-    <div class="card mb-6">
-        <h2 class="text-xl font-semibold mb-4">Client Details</h2>
-        {% for field in fields %}
+<div class="card">
+    <form method="post" action="/action/{{ request.path_params.path }}">
+        {% for field in item.form_fields %}
             {% if field.type == 'hidden' %}
-                <input type="hidden" id="{{ field.name }}" name="{{ field.name }}" value="{{ data.get(field.name, '') }}">
+                <input type="hidden" name="{{ field.name }}" value="{{ (data.get(field.name) if data else '') or field.default or '' }}">
             {% else %}
                 <div class="mb-4">
-                    <label for="{{ field.name }}" class="block mb-1">{{ field.label }}:</label>
+                    <label for="{{ field.name }}" class="block text-sm font-medium text-gray-700 dark:text-gray-300">{{ field.label }}</label>
+                    
                     {% if field.type == "select" %}
-                        <select id="{{ field.name }}" name="{{ field.name }}" {% if field.required %}required{% endif %}>
-                            {% for opt in field.options %}
-                                <option value="{{ opt.value }}" {% if data.get(field.name) and data.get(field.name)|string == opt.value|string %}selected{% endif %}>{{ opt.label }}</option>
+                        <select id="{{ field.name }}" name="{{ field.name }}" class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600" {% if field.required %}required{% endif %}>
+                            {% if field.options_loader %}
+                                {# Options are loaded dynamically, can't render them here without more complex backend #}
+                                {# This assumes the loader pre-populates field.options, which it doesn't yet. #}
+                                {# For now, this will be empty unless options are hardcoded. #}
+                            {% endif %}
+                             {% for opt in field.options %}
+                                <option value="{{ opt.value }}" {% if data and data.get(field.name)|string == opt.value|string %}selected{% endif %}>{{ opt.label }}</option>
                             {% endfor %}
                         </select>
                     {% else %}
-                        <input type="{{ field.type }}" id="{{ field.name }}" name="{{ field.name }}" value="{{ data.get(field.name, '') }}" {% if field.required %}required{% endif %}>
+                        <input type="{{ field.type }}" 
+                               id="{{ field.name }}" 
+                               name="{{ field.name }}" 
+                               value="{{ (data.get(field.name) if data else '') or field.default or '' }}" 
+                               class="mt-1 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50 dark:bg-gray-700 dark:border-gray-600" 
+                               {% if field.required %}required{% endif %} 
+                               {% if field.readonly %}readonly{% endif %}
+                               placeholder="{{ field.placeholder or '' }}">
                     {% endif %}
                 </div>
             {% endif %}
         {% endfor %}
-    </div>
-
-    {% if action.name == 'Edit Client' %}
-        {% if data.ip_allocations or data.ip_subnets %}
-        <div class="card mb-6">
-            <h2 class="text-xl font-semibold mb-4">Current Assignments</h2>
-            <ul>
-                {% for alloc in data.ip_allocations %}
-                <li class="flex justify-between items-center py-2 border-b">
-                    <span>IP: {{ alloc.ip_address }} ({{ alloc.description }})</span>
-                    <a href="/remove-assignment/ip/{{ alloc.id }}?client_id={{ data.id }}" class="action-button-red">Remove</a>
-                </li>
-                {% endfor %}
-                {% for subnet in data.ip_subnets %}
-                <li class="flex justify-between items-center py-2 border-b">
-                    <span>Subnet: {{ subnet.subnet }} ({{ subnet.description }})</span>
-                    <a href="/remove-assignment/subnet/{{ subnet.id }}?client_id={{ data.id }}" class="action-button-red">Remove</a>
-                </li>
-                {% endfor %}
-            </ul>
+        
+        <div class="mt-6">
+            <button type="submit" class="action-button-green">{{ item.name }}</button>
+            <a href="{{ request.headers.get('referer', '/') }}" class="action-button ml-2">Cancel</a>
         </div>
-        {% endif %}
+    </form>
+</div>
 
-        <div class="card">
-            <h2 class="text-xl font-semibold mb-4">Add New Assignments</h2>
-            <div id="assignments-container" class="space-y-4"></div>
-            <div class="mt-4">
-                <button type="button" onclick="addAssignment()" class="action-button">+ Add Assignment</button>
-            </div>
-        </div>
-    {% endif %}
-
-    <div class="mt-6">
-        <button type="submit" class="action-button-green">{{ action.name }}</button>
-    </div>
-</form>
-
-<script>
-const pools = JSON.parse('{{ pools_json|safe }}');
-let assignmentIndex = 0;
-
-function addAssignment() {
-    const container = document.getElementById('assignments-container');
-    const assignmentId = `assignment-${assignmentIndex}`;
-    
-    const div = document.createElement('div');
-    div.className = 'p-4 border rounded-md bg-gray-50 dark:bg-gray-800';
-    div.id = assignmentId;
-
-    const poolOptions = pools.map(pool => {
-        const prefix = pool.cidr.split('/')[1];
-        const value = `${pool.id}_${pool.afi}_${prefix}`;
-        const label = pool.description || pool.name;
-        return `<option value="${value}">${label}</option>`;
-    }).join('');
-
-    div.innerHTML = `
-        <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
-            <div>
-                <label for="assignment_pool_id_${assignmentIndex}">Pool:</label>
-                <select name="assignment_pool_id[]" id="assignment_pool_id_${assignmentIndex}" onchange="handlePoolChange(this, '${assignmentId}')" required>
-                    <option value="">-- Select Pool --</option>
-                    ${poolOptions}
-                </select>
-            </div>
-            <div>
-                <label for="assignment_type_${assignmentIndex}">Type:</label>
-                <select name="assignment_type[]" id="assignment_type_${assignmentIndex}" onchange="handlePoolChange(this, '${assignmentId}')" required>
-                    <option value="static">Static IP</option>
-                    <option value="subnet">Subnet</option>
-                </select>
-            </div>
-            <div class="prefix-container" style="display: none;">
-                <label for="assignment_prefix_${assignmentIndex}">Prefix Length:</label>
-                <select name="assignment_prefix[]" id="assignment_prefix_${assignmentIndex}"></select>
-            </div>
-        </div>
-        <div class="mt-2 text-right">
-            <button type="button" onclick="removeAssignment('${assignmentId}')" class="text-red-500 hover:text-red-700">Remove</button>
-        </div>
-    `;
-
-    container.appendChild(div);
-    assignmentIndex++;
-}
-
-function handlePoolChange(selectElement, assignmentId) {
-    const assignmentDiv = document.getElementById(assignmentId);
-    const typeSelect = assignmentDiv.querySelector('select[name="assignment_type[]"]');
-    const prefixContainer = assignmentDiv.querySelector('.prefix-container');
-    const prefixSelect = assignmentDiv.querySelector('select[name="assignment_prefix[]"]');
-    const poolSelect = assignmentDiv.querySelector('select[name="assignment_pool_id[]"]');
-    
-    if (typeSelect.value === 'subnet' && poolSelect.value) {
-        prefixContainer.style.display = 'block';
-        prefixSelect.required = true;
-
-        const [poolId, poolAfi, poolPrefix] = poolSelect.value.split('_');
-        const prefixes = poolAfi === 'ipv4' ? [29, 27] : [64, 56];
-
-        prefixSelect.innerHTML = ''; // Clear existing options
-        for (const prefix of prefixes) {
-            const option = document.createElement('option');
-            option.value = prefix;
-            option.textContent = `/${prefix}`;
-            prefixSelect.appendChild(option);
-        }
-    } else {
-        prefixContainer.style.display = 'none';
-        prefixSelect.required = false;
-    }
-}
-
-function removeAssignment(assignmentId) {
-    const assignmentDiv = document.getElementById(assignmentId);
-    assignmentDiv.remove();
-}
-</script>
 {% endblock %}

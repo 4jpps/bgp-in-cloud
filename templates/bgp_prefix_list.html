@@ -1,0 +1,51 @@
+{% extends "base.html" %}
+
+{% block title %}Manage Prefixes for {{ peer.name }}{% endblock %}
+
+{% block content %}
+<section>
+    <h1>Manage Prefixes for {{ peer.name }}</h1>
+
+    <h2>Add New Prefix</h2>
+    <form method="post" action="/action/bgp/prefixes/add/{{ peer.id }}">
+        <div class="form-group">
+            <label for="prefix">Prefix (e.g., 192.168.1.0/24)</label>
+            <input type="text" id="prefix" name="prefix" required>
+        </div>
+        <button type="submit">Add Prefix</button>
+    </form>
+
+    <h2 class="mt-8">Current Prefixes</h2>
+    <table class="data-table">
+        <thead>
+            <tr>
+                <th>Prefix</th>
+                <th>Status</th>
+                <th>Created At</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for ad in list_data %}
+            <tr class="{% if ad.blackholed %}blackholed{% endif %}">
+                <td>{{ ad.prefix }}</td>
+                <td>{% if ad.blackholed %}Blackholed{% else %}Active{% endif %}</td>
+                <td>{{ ad.created_at }}</td>
+                <td>
+                    <form action="/action/bgp/prefixes/blackhole/{{ ad.id }}" method="post" style="display:inline;">
+                        <button type="submit">{% if ad.blackholed %}Un-Blackhole{% else %}Blackhole{% endif %}</button>
+                    </form>
+                    <form action="/action/bgp/prefixes/delete/{{ ad.id }}" method="post" style="display:inline;">
+                        <button type-="submit" onclick="return confirm('Are you sure?');">Delete</button>
+                    </form>
+                </td>
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="4">No prefixes advertised for this peer.</td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</section>
+{% endblock %}

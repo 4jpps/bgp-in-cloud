@@ -24,7 +24,6 @@ def get_wan_ip():
     except Exception:
         return None
 
-# Use thread-local data to ensure each thread gets its own DB connection
 local = threading.local()
 
 def get_db_connection(db_path):
@@ -41,7 +40,23 @@ class BIC_DB:
         self._run_migrations()
 
     def _run_migrations(self):
-        # ... (migrations logic remains the same) ...
-        pass
+        cursor = self.conn.cursor()
+        cursor.execute("PRAGMA user_version = 12")
+        self._create_schema(cursor)
+        self.conn.commit()
 
-    # ... (all other DB methods remain the same) ...
+    def _create_schema(self, cursor):
+        cursor.execute("CREATE TABLE IF NOT EXISTS clients (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, name TEXT NOT NULL, email TEXT, type TEXT NOT NULL, asn INTEGER, wireguard_conf TEXT, bgp_frr_conf TEXT, bgp_bird_conf TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS ip_pools (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, name TEXT NOT NULL UNIQUE, afi TEXT NOT NULL, cidr TEXT NOT NULL UNIQUE, description TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS ip_allocations (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, pool_id TEXT NOT NULL, client_id TEXT, ip_address TEXT NOT NULL UNIQUE, description TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(pool_id) REFERENCES ip_pools(id) ON DELETE CASCADE, FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE SET NULL)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS ip_subnets (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, pool_id TEXT NOT NULL, client_id TEXT, subnet TEXT NOT NULL UNIQUE, description TEXT, created_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(pool_id) REFERENCES ip_pools(id) ON DELETE CASCADE, FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE SET NULL)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS wireguard_interfaces (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, name TEXT NOT NULL UNIQUE, listen_port INTEGER NOT NULL, address TEXT NOT NULL, private_key TEXT NOT NULL, public_key TEXT NOT NULL)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS wireguard_peers (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, interface_id TEXT NOT NULL, client_id TEXT UNIQUE, name TEXT NOT NULL, public_key TEXT NOT NULL, allowed_ips TEXT, FOREIGN KEY(interface_id) REFERENCES wireguard_interfaces(id) ON DELETE CASCADE, FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS bgp_sessions (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, client_id TEXT NOT NULL, state TEXT, last_updated DATETIME, FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS email_log (id TEXT PRIMARY KEY, display_id INTEGER UNIQUE, client_id TEXT NOT NULL, subject TEXT, sent_at DATETIME DEFAULT CURRENT_TIMESTAMP, FOREIGN KEY(client_id) REFERENCES clients(id) ON DELETE CASCADE)")
+        cursor.execute("CREATE TABLE IF NOT EXISTS settings (key TEXT PRIMARY KEY, value TEXT)")
+
+    def find_all(self, table):
+        return self.conn.execute(f"SELECT * FROM {table}").fetchall()
+
+    # ... (all other DB methods)

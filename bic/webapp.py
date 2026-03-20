@@ -97,7 +97,9 @@ async def get_current_user(request: Request, db: BIC_DB = Depends(get_db)):
         return RedirectResponse(url="/page/auth/login")
 
     try:
-        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        secret_key = system_management.get_secret_key(db)
+        algorithm = system_management.get_jwt_algorithm(db)
+        payload = jwt.decode(token, secret_key, algorithms=[algorithm])
         username: str = payload.get("sub")
         if username is None:
             raise HTTPException(status_code=401, detail="Invalid authentication credentials")

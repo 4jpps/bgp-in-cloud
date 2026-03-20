@@ -1,5 +1,10 @@
 # Changelog
 
+## Version 2026.03.20.1457
+
+-   **Bugfix:** Resolved a `NameError` after login by refactoring the `get_current_user` function to use database-driven JWT settings.
+-   **Bugfix:** Corrected the stylesheet path in the base template to fix all UI styling issues.
+
 ## Version 2026.03.20.1448
 
 -   **Bugfix:** Gracefully handle 404 errors when checking for updates from GitHub.

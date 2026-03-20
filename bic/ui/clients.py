@@ -105,7 +105,7 @@ view_clients_list = UIView(
 
 view_client_detail = UIView(
     name="Client Detail",
-    template="client_detail.html",
+    template="client_configs.html",
     handler=load_client_for_view,
     context_name="client",
 )

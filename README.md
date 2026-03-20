@@ -30,7 +30,12 @@ This project includes an installer script to automate the setup process.
     ./bic-installer.sh
     ```
 
-    This script will create a Python virtual environment, install all dependencies, and initialize the database. If you are on Windows or prefer to run the steps manually, please see the [Developer Guide](docs/DEVELOPER_GUIDE.md).
+    On Windows (in PowerShell):
+    ```powershell
+    .\bic-installer.ps1
+    ```
+
+    This script will create a Python virtual environment, install all dependencies, and initialize the database. If you prefer to run the steps manually, please see the [Developer Guide](docs/DEVELOPER_GUIDE.md).
 
 3.  **Run the Application:**
 

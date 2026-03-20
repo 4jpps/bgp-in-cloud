@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Check for Updates - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="card max-w-lg mx-auto text-center">
+    <h1 class="text-2xl font-bold mb-4">Update Management</h1>
+    
+    <p class="mb-2">Current Version: <strong class="text-lg">{{ __version__ }}</strong></p>
+
+    <div id="update-status" class="mt-4">
+        <!-- Status will be dynamically inserted here by JavaScript -->
+    </div>
+
+    <div class="mt-6">
+        <button id="check-update-btn" onclick="checkForUpdate()" class="action-button">Check for Updates</button>
+    </div>
+</div>
+
+<script>
+function checkForUpdate() {
+    const btn = document.getElementById('check-update-btn');
+    const statusDiv = document.getElementById('update-status');
+    
+    btn.disabled = true;
+    btn.textContent = 'Checking...';
+    statusDiv.innerHTML = '<p class="text-gray-500">Contacting GitHub...</p>';
+
+    fetch('/api/check-update')
+        .then(response => response.json())
+        .then(data => {
+            if (data.update_available) {
+                statusDiv.innerHTML = `
+                    <div class="bg-green-500 text-white p-4 rounded-md">
+                        <h3 class="font-bold">Update Available!</h3>
+                        <p>New version: <strong>${data.new_version}</strong></p>
+                        <div class="mt-4">
+                            <button onclick="performUpdate()" class="action-button-white">Update Now</button>
+                        </div>
+                    </div>`;
+            } else {
+                statusDiv.innerHTML = `
+                    <div class="bg-gray-700 text-white p-4 rounded-md">
+                        <p>You are on the latest version.</p>
+                    </div>`;
+            }
+        })
+        .catch(err => {
+            statusDiv.innerHTML = `<p class="text-red-500">Error checking for updates: ${err}</p>`;
+        })
+        .finally(() => {
+            btn.disabled = false;
+            btn.textContent = 'Check for Updates';
+        });
+}
+</script>
+{% endblock %}

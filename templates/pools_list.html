@@ -1,0 +1,41 @@
+{% extends "base.html" %}
+
+{% block title %}{{ item.name }} - {{ super() }}{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">{{ item.name }}</h1>
+    <a href="/page/network/pools/add" class="action-button">Add IP Pool</a>
+</div>
+
+<div class="card overflow-x-auto">
+    <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+        <thead class="bg-gray-50 dark:bg-gray-800">
+            <tr>
+                {% for column in item.table_columns %}
+                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
+                        {{ column.label }}
+                    </th>
+                {% endfor %}
+            </tr>
+        </thead>
+        <tbody class="bg-white dark:bg-gray-900 divide-y divide-gray-200 dark:divide-gray-700">
+            {% for row in list_data %}
+            <tr>
+                {% for column in item.table_columns %}
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        {{ row[column.name] }}
+                    </td>
+                {% endfor %}
+            </tr>
+            {% else %}
+            <tr>
+                <td colspan="{{ item.table_columns|length }}" class="px-6 py-4 text-center text-sm text-gray-500">
+                    No IP pools found.
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% endblock %}

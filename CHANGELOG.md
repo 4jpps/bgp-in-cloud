@@ -1,5 +1,9 @@
 # Changelog
 
+## Version 2026.03.20.1534
+
+-   **Bugfix:** Performed a full template audit and created all missing templates to resolve `TemplateNotFound` errors.
+
 ## Version 2026.03.20.1515
 
 -   **UAT:** Completed a full user acceptance test, validating all navigation, page rendering, and core functionality.

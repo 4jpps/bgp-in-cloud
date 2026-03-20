@@ -4,7 +4,7 @@ from bic.modules import network_management
 # --- Views ---
 view_allocations = UIView(
     name="IP Allocations",
-    template="allocations_list.html",
+    template="pools_list.html",
     handler=network_management.list_allocations_with_details,
     table_columns=[
         TableColumn(name="pool_name", label="Pool"),
@@ -30,7 +30,7 @@ add_pool_action = UIAction(
 list_pools_view = UIView(
     name="List IP Pools",
     handler=lambda db_core, **kwargs: db_core.find_all('ip_pools'),
-    template="pools_list.html",
+    template="allocations_list.html",
     table_columns=[
         TableColumn(name="name", label="Pool Name"),
         TableColumn(name="cidr", label="CIDR"),

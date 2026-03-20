@@ -41,7 +41,7 @@
                 </ul>
             </nav>
             <div class="mt-auto text-sm text-gray-500">
-                <p>Copyright &copy; {% now 'utc', '%Y' %} {{ settings.get('branding_company_name', 'Jeff Parrish PC Services') }}. Version: {{ version }}</p>
+                <p>Copyright &copy; {{ datetime.utcnow().year }} {{ settings.get('branding_company_name', 'Jeff Parrish PC Services') }}. Version: {{ version }}</p>
             </div>
         </div>
 

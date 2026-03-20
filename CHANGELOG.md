@@ -2,6 +2,25 @@
 
 All notable changes to this project will be documented in this file.
 
+## [2026.03.20.0544] - 2026-03-20
+
+### Added
+- **Live Web-Based Monitoring:** Replaced the TUI with a new "Live View" page in the web app, featuring real-time, two-panel display of system statistics and console logs via WebSockets.
+- **Configuration Viewing:** Added a "View Configs" page to the web UI, allowing for easy viewing of generated WireGuard, BIRD, and FRR configurations for each client.
+- **Dynamic IP Assignment UI:** Overhauled the client creation and editing forms with a JavaScript-powered dynamic interface for adding and removing multiple IP or subnet assignments.
+
+### Changed
+- **IPAM Core Logic:** Corrected the core IP allocation logic to only assign usable IPs, never the network or broadcast address of a subnet.
+- **BGP Configuration:** Refactored BGP configuration generation to be IP family-aware, only creating IPv4 or IPv6 sessions if the client has corresponding IP assignments.
+- **WireGuard Configuration:** Implemented a major refactoring of WireGuard configuration generation to adhere to a strict set of new networking rules, correctly handling all IP family scenarios (IPv4-only, IPv6-only, dual-stack, BGP) for `DNS`, `Address`, and `AllowedIPs` fields.
+- **Default WireGuard Endpoint:** The default WireGuard endpoint for client configurations now intelligently uses the server's public WAN IP, determined from the local interface, instead of a static placeholder or an external service.
+
+### Fixed
+- **BGP Email Notifications:** Corrected an `AttributeError` that occurred when editing a non-BGP client, ensuring BGP configs are only processed for "Transit" type clients.
+- **UI Bugs:** Fixed several UI bugs on the "Edit Client" page, including an erroneous "None:" label and an empty "Pool" dropdown.
+- **Commit Message Failures:** Resolved repeated commit failures by simplifying commit message content.
+
+
 ## [2026.03.19.0919] - 2026-03-19
 
 ### Added
